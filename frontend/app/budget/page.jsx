@@ -22,7 +22,7 @@ function BudgetPage() {
     e.preventDefault();
 
     try {
-      const response = await fetch("/budget/split", {
+      const response = await fetch("http://localhost:8000/budget/split", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
