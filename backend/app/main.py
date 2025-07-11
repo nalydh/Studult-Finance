@@ -15,7 +15,7 @@ class BudgetOutput(BaseModel):
   wants: float
   savings: float
 
-@app.post("/budget")
+@app.post("/budget/split")
 def calculate_split(data: BudgetInput) -> BudgetOutput:
   total_pct = data.needs_pct + data.wants_pct + data.savings_pct
 
