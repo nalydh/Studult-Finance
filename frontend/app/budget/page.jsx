@@ -10,6 +10,12 @@ function BudgetPage() {
     savingsPct: null,
   });
 
+  const [splitDisplay, setSplitDisplay] = useState({
+    needs: 0,
+    wants: 0,
+    savings: 0,
+  });
+
   function handleChange(e) {
     setForm({
       ...form,
@@ -35,9 +41,19 @@ function BudgetPage() {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Backend returned ${response.status}`);
+      }
+
       const data = await response.json();
       console.log("Received split:", data);
       // TODO: Store this in state to show user results
+
+      setSplitDisplay({
+        needs: data.needs,
+        wants: data.wants,
+        savings: data.savings,
+      });
     } catch (error) {
       console.error("POST ERROR:", error);
     }
@@ -48,7 +64,7 @@ function BudgetPage() {
       <label>Weekly Income:</label>
       <input type="number" name="income" onChange={handleChange} />
 
-      <h2>Savings Split</h2>
+      <h2>Calculate Split</h2>
       <label>Needs: </label>
       <input type="number" name="needsPct" onChange={handleChange} />
 
@@ -58,6 +74,12 @@ function BudgetPage() {
       <label>Savings: </label>
       <input type="number" name="savingsPct" onChange={handleChange} />
 
+      <h2>Savings Split Breakdown</h2>
+      {Object.entries(splitDisplay).map(([key, value]) => (
+        <p key={key}>
+          {key.charAt(0).toUpperCase() + key.slice(1) + ": " + value}
+        </p>
+      ))}
       <button type="submit" onClick={handleSubmit}>
         Submit
       </button>
