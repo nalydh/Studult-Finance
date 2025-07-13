@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, React } from "react";
+import SplitDisplay from "./components/SplitDisplay";
+import BudgetForm from "./components/BudgetForm";
 
 function BudgetPage() {
   const [form, setForm] = useState({
-    income: null,
-    needsPct: null,
-    wantsPct: null,
-    savingsPct: null,
+    income: "",
+    needsPct: "",
+    wantsPct: "",
+    savingsPct: "",
   });
 
   const [splitDisplay, setSplitDisplay] = useState({
@@ -47,7 +49,6 @@ function BudgetPage() {
 
       const data = await response.json();
       console.log("Received split:", data);
-      // TODO: Store this in state to show user results
 
       setSplitDisplay({
         needs: data.needs,
@@ -61,28 +62,12 @@ function BudgetPage() {
 
   return (
     <div>
-      <label>Weekly Income:</label>
-      <input type="number" name="income" onChange={handleChange} />
-
-      <h2>Calculate Split</h2>
-      <label>Needs: </label>
-      <input type="number" name="needsPct" onChange={handleChange} />
-
-      <label>Wants: </label>
-      <input type="number" name="wantsPct" onChange={handleChange} />
-
-      <label>Savings: </label>
-      <input type="number" name="savingsPct" onChange={handleChange} />
-
-      <h2>Savings Split Breakdown</h2>
-      {Object.entries(splitDisplay).map(([key, value]) => (
-        <p key={key}>
-          {key.charAt(0).toUpperCase() + key.slice(1) + ": " + value}
-        </p>
-      ))}
-      <button type="submit" onClick={handleSubmit}>
-        Submit
-      </button>
+      <BudgetForm
+        form={form}
+        handleSubmit={handleSubmit}
+        handleChange={handleChange}
+      />
+      <SplitDisplay data={splitDisplay} />
     </div>
   );
 }
