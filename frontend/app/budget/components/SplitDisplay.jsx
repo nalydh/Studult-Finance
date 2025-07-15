@@ -31,7 +31,7 @@ function SplitDisplay({ data }) {
           key={key}
           title={title}
           icon={icon}
-          value={data[key].toFixed(2)}
+          value={data[key]}
           description={description}
         />
       ))}

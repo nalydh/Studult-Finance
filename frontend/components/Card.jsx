@@ -7,7 +7,9 @@ function Card({ title, description, value, icon, goal, colour }) {
     <div className={`${colour} rounded-xl p-4 shadow border text-center`}>
       <div className="flex justify-center text-3xl">{icon}</div>
       <h3 className="text-lg font-bold">{title}</h3>
-      <p className="text-2xl text-primary font-semibold">${value}</p>
+      <p className="text-2xl text-primary font-semibold font-mono">
+        ${value.toFixed(2)}
+      </p>
       {description && <p className="text-sm text-gray-500">{description}</p>}
       {goal && (
         <div className="w-full bg-gray-200 h-2 rounded mt-2">

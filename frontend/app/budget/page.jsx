@@ -3,6 +3,7 @@
 import { useState, React } from "react";
 import SplitDisplay from "./components/SplitDisplay";
 import BudgetForm from "./components/BudgetForm";
+import DoughnutChart from "./components/DoughnutChart";
 
 function BudgetPage() {
   const [form, setForm] = useState({
@@ -11,6 +12,7 @@ function BudgetPage() {
     wantsPct: "",
     savingsPct: "",
   });
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const [splitDisplay, setSplitDisplay] = useState({
     needs: 0,
@@ -23,7 +25,7 @@ function BudgetPage() {
       ...form,
       [e.target.name]: Number(e.target.value),
     });
-    console.log(form);
+    setHasSubmitted(false);
   }
 
   async function handleSubmit(e) {
@@ -55,19 +57,37 @@ function BudgetPage() {
         wants: data.wants,
         savings: data.savings,
       });
+      setHasSubmitted(true);
     } catch (error) {
       console.error("POST ERROR:", error);
     }
   }
 
   return (
-    <div>
-      <BudgetForm
-        form={form}
-        handleSubmit={handleSubmit}
-        handleChange={handleChange}
-      />
-      <SplitDisplay data={splitDisplay} />
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Left: Form */}
+        <div className="flex-1">
+          <BudgetForm
+            form={form}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+          />
+        </div>
+        {/* Right: Split Display + Doughnut */}
+        <div className="flex-1 flex flex-col gap-6">
+          <SplitDisplay data={splitDisplay} />
+          {hasSubmitted && (
+            <DoughnutChart
+              data={{
+                needsPct: form.needsPct,
+                wantsPct: form.wantsPct,
+                savingsPct: form.savingsPct,
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
