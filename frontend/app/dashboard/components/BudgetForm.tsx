@@ -4,8 +4,8 @@ BudgetForm Component:
 */
 
 import React from "react";
-import InputField from "../../../../components/InputField";
-import { InputFieldProps } from "../../../../components/InputField";
+import InputField from "../../../components/InputField";
+import { InputFieldProps } from "../../../components/InputField";
 
 function BudgetForm({ income, handleSubmit, handleChange }) {
   const formFields: InputFieldProps[] = [

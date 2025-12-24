@@ -1,5 +1,5 @@
 import React from "react";
-import Card from "../../../../components/Card";
+import Card from "../../../components/Card";
 import { PiggyBankIcon, ReceiptIcon, WalletMinimalIcon } from "lucide-react";
 import { SplitData } from "../page";
 

@@ -4,9 +4,9 @@ Custom Split Component:
 */
 
 import React, { ChangeEvent, useEffect, useRef } from "react";
-import InputField, { InputFieldProps } from "./InputField";
+import InputField, { InputFieldProps } from "../../../components/InputField";
 import { BudgetForm } from "@/app/welcome/page";
-import { CheckCircle2, AlertCircle, InfoIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 
 interface CustomSplitProps {
   form: BudgetForm;

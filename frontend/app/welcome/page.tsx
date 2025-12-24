@@ -7,7 +7,7 @@ Budget Page:
 "use client";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import SplitSelector from "../../components/SplitSelector";
+import SplitSelector from "./components/SplitSelector";
 import { SPLIT_OPTIONS } from "../../components/StrategyPresets";
 import { CUSTOM_SPLIT_ID } from "../../components/StrategyPresets";
 

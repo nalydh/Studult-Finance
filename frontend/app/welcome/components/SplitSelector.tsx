@@ -8,8 +8,8 @@ import { PiggyBankIcon, WalletMinimalIcon, ReceiptIcon } from "lucide-react";
 import React, { useRef, useEffect, ChangeEvent, FormEvent } from "react";
 import { Tooltip } from "react-tooltip";
 import CustomSplit from "./CustomSplit";
-import { SPLIT_OPTIONS } from "./StrategyPresets";
-import { CUSTOM_SPLIT_ID } from "./StrategyPresets";
+import { SPLIT_OPTIONS } from "../../../components/StrategyPresets";
+import { CUSTOM_SPLIT_ID } from "../../../components/StrategyPresets";
 import { BudgetForm } from "@/app/welcome/page";
 
 interface SplitSelectorProps {
