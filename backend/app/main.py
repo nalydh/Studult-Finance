@@ -1,9 +1,21 @@
-from typing import Union
 from fastapi import FastAPI
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from sqlmodel import SQLModel
+from app.database import engine
+from app.routers import budget
 
-app = FastAPI()
+def create_db_and_tables():
+  SQLModel.metadata.create_all(engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  print("Startup: Creating database tables...")
+  create_db_and_tables()
+  yield
+  print("Shutdown: Cleaning up...")
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
   CORSMiddleware,
@@ -13,26 +25,5 @@ app.add_middleware(
   allow_headers=["*"],
 )
 
-class BudgetInput(BaseModel):
-  income: float
-  needs_pct: float
-  wants_pct: float
-  savings_pct: float
-
-class BudgetOutput(BaseModel):
-  needs: float
-  wants: float
-  savings: float
-
-@app.post("/budget/split")
-def calculate_split(data: BudgetInput) -> BudgetOutput:
-  total_pct = data.needs_pct + data.wants_pct + data.savings_pct
-
-  if total_pct != 100:
-    return {"error": "The total split must equal 100%"}
-
-  return {
-    "needs": round((data.income / 100 * data.needs_pct), 2),
-    "wants": round((data.income / 100 * data.wants_pct), 2),
-    "savings": round((data.income / 100 * data.savings_pct), 2),
-  }
+# Include routers
+app.include_router(budget.router)
