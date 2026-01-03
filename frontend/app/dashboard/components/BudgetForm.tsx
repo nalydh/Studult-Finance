@@ -4,50 +4,46 @@ BudgetForm Component:
 */
 
 import React from "react";
-import InputField from "../../../components/InputField";
-import { InputFieldProps } from "../../../components/InputField";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PiggyBankIcon, ReceiptIcon, WalletMinimalIcon } from "lucide-react";
 
 function BudgetForm({ income, handleSubmit, handleChange }) {
-  const formFields: InputFieldProps[] = [
-    {
-      label: "Weekly Income",
-      name: "income",
-      value: income,
-      prefix: "$",
-      handleChange: handleChange,
-    },
-  ];
-
   return (
-    <div className="bg-white rounded p-6 pb-11 shadow border max-w-md mx-auto">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold mb-4 text-foreground">
-          Weekly Budget Planner
-        </h2>
-        {formFields.map(({ label, name, value, prefix, suffix, handleChange }) => {
-          return (
-            <div key={name}>
-              <InputField
-                label={label}
-                name={name}
-                value={value}
-                prefix={prefix}
-                suffix={suffix}
-                handleChange={handleChange}
-              />
-            </div>
-          );
-        })}
-
-        <button
-          type="submit"
-          onClick={handleSubmit}
-          className="bg-primary text-white font-semibold py-2 px-4 rounded hover:bg-primary-dark transition"
-        >
-          Submit
-        </button>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl font-bold">
+            Weekly Budget Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              Weekly Income
+            </label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={income}
+              onChange={handleChange}
+              prefix="$"
+              placeholder="0.00"
+              pattern="[0-9]*\.?[0-9]*"
+              className="focus-visible:ring-primary-light"
+            />
+          </div>
+          <div >
+          <button
+            type="submit"
+            className="w-full bg-primary-dark hover:bg-primary-light text-white py-2 px-4 rounded transition"
+          >
+            Submit
+          </button>
+          </div>
+        </CardContent>
+      </Card>
+    </form>
   );
 }
 

@@ -8,7 +8,6 @@ Weekly Budget Planner:
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import BudgetForm from "./components/BudgetForm";
-import SplitDisplay from "./components/SplitDisplay";
 
 export interface SplitData {
   needs: number;
@@ -103,9 +102,6 @@ function WalletPage() {
               handleSubmit={handleSubmit}
               handleChange={handleChange}
             />
-          </div>
-          <div className="flex-1 flex flex-col gap-6">
-            <SplitDisplay percentages={splitData} amounts={splitAmounts} />
           </div>
         </div>
       )}
