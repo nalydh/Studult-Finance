@@ -67,7 +67,7 @@ function CustomSplit({ form, handleChange, isDisabled }: CustomSplitProps) {
                 disabled={isDisabled}
                 maxLength={5}
                 suffix="%"
-                className="w-28 focus-visible:ring-primary-light"
+                className="w-56 focus-visible:ring-primary-light"
                 pattern="[0-9]*\.?[0-9]*"
               />
             </div>

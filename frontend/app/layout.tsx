@@ -1,7 +1,12 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Source_Code_Pro } from "next/font/google";
 import "./globals.css";
 import "react-tooltip/dist/react-tooltip.css";
 import { Metadata } from "next";
+
+const sourceCodePro = Source_Code_Pro({
+  variable: "--font-source-code-pro",
+  subsets: ["latin"],
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${sourceCodePro.variable} antialiased`}
       >
         <div className="px-4 py-8">{children}</div>
       </body>

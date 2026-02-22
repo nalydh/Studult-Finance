@@ -142,7 +142,7 @@ function SplitSelector({
 
         {/* Custom Split Section */}
           <div
-            className={`mt-4 transition rounded shadow hover:shadow-lg border ${
+            className={`mt-4 transition rounded-xl shadow hover:shadow-lg ${
               selected === CUSTOM_SPLIT_ID
                 ? "ring-2 ring-primary-light"
                 : "hover:ring-1 ring-gray-300"
