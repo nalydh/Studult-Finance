@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models.preference import Preference
@@ -12,9 +12,9 @@ router = APIRouter(prefix="/budget", tags=["budget"])
 def insert_preference(data: Preference, session: Session = Depends(get_session)):
     total_pct = data.needs_pct + data.wants_pct + data.savings_pct
     if not all(0 <= pct <= 100 for pct in [data.needs_pct, data.wants_pct, data.savings_pct]):
-        return {"error": "Percentages must be between 0 and 100"}
+        raise HTTPException(status_code=400, detail="Percentages must be between 0 and 100")
     if total_pct != 100:
-        return {"error": "The total split must equal 100%"}
+        raise HTTPException(status_code=400, detail="The total split must equal 100%")
 
     try:
         session.add(data)
@@ -22,7 +22,7 @@ def insert_preference(data: Preference, session: Session = Depends(get_session))
         session.refresh(data)
         return data
     except Exception as error:
-        return {"error": str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
     
 @router.get("/preferences")
 def get_preference(session: Session = Depends(get_session)):
@@ -34,7 +34,7 @@ def get_preference(session: Session = Depends(get_session)):
             return {"error": "No preferences found"}
         return result
     except Exception as error:
-        return {"error": str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
     
 # Budget Items Endpoints
 @router.post("/items")
@@ -45,7 +45,7 @@ def insert_budget_item(data: BudgetItem, session: Session = Depends(get_session)
         session.refresh(data)
         return data
     except Exception as error:
-        return {"error": str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
     
 @router.delete("/items/{item_id}")
 def delete_budget_item(item_id: int, session: Session = Depends(get_session)):
@@ -57,9 +57,9 @@ def delete_budget_item(item_id: int, session: Session = Depends(get_session)):
             session.commit()
             return {"message": "Item deleted successfully"}
         else:
-            return {"error": "Item not found"}
+            raise HTTPException(status_code=400, detail="Item not found")
     except Exception as error:
-        return {"error": str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
     
 @router.get("/items")
 def get_budget_items(session: Session = Depends(get_session)):
@@ -68,16 +68,15 @@ def get_budget_items(session: Session = Depends(get_session)):
         results = session.exec(statement).all()
         return results
     except Exception as error:
-        return {"error": str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
 
-# Budget Insertion Endpoint
 @router.post("/calculate")
 def calculate_and_insert_budget(income_event: IncomeEvent, session: Session = Depends(get_session)):
     try:
         pref_statement = select(Preference).limit(1)
         preferences = session.exec(pref_statement).first()
         if not preferences:
-            return {"error": "No preferences found"}
+            raise HTTPException(status_code=400, detail="No preferences found")
 
         # Calculate allocations
         needs_amount = (preferences.needs_pct / 100) * income_event.amount
@@ -98,4 +97,4 @@ def calculate_and_insert_budget(income_event: IncomeEvent, session: Session = De
 
         return income_event
     except Exception as error:
-        return {"error": str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
