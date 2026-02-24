@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from sqlmodel import SQLModel
 from app.database import engine
 from app.routers import budget
+from app.routers import asset
 
 def create_db_and_tables():
   SQLModel.metadata.create_all(engine)
@@ -27,3 +28,4 @@ app.add_middleware(
 
 # Include routers
 app.include_router(budget.router)
+app.include_router(asset.router)
