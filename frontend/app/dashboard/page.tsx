@@ -8,6 +8,7 @@ Dashboard Page:
 
 import React from "react";
 import BudgetForm from "./components/budgetsplitter/components/BudgetForm";
+import AssetLedger from "./components/assetledger/AssetLedger";
 
 function DashboardPage() {
   return (
@@ -16,7 +17,9 @@ function DashboardPage() {
         <div className="flex-1">
           <BudgetForm />
         </div>
-        {/* Future dashboard components will go here */}
+      </div>
+      <div className="mt-6">
+        <AssetLedger />
       </div>
     </div>
   );

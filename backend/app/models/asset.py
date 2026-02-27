@@ -19,3 +19,9 @@ class Asset(SQLModel, table=True):
     if self.is_sold and self.sale_price is not None:
       return self.sale_price - self.purchase_price
     return None 
+
+class AssetUpdate(SQLModel):
+  name: str | None = None
+  category: str | None = None
+  purchase_price: float | None = None
+  date_acquired: datetime | None = None

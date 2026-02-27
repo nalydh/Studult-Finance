@@ -57,7 +57,7 @@ function BudgetForm() {
   useEffect(() => {
     async function fetchSplit() {
       try {
-        const splitResult = await fetch("http://localhost:8000/budget/preferences");
+        const splitResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`);
         const splitData = await splitResult.json();
 
         setSplitData({
@@ -66,7 +66,7 @@ function BudgetForm() {
           savings: splitData.savings_pct,
         });
 
-        const itemsResult = await fetch("http://localhost:8000/budget/items");
+        const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
         const itemsData = await itemsResult.json();
         setBudgetItems(itemsData);
       } catch (error) {
@@ -102,7 +102,7 @@ function BudgetForm() {
 
   async function refreshBudgetItems() {
     try {
-      const itemsResult = await fetch("http://localhost:8000/budget/items");
+      const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
       const itemsData = await itemsResult.json();
       setBudgetItems(itemsData);
     } catch (error) {
@@ -112,7 +112,7 @@ function BudgetForm() {
 
   async function refreshSplitPreferences() {
     try {
-      const splitResult = await fetch("http://localhost:8000/budget/preferences");
+      const splitResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`);
       const splitData = await splitResult.json();
       setSplitData({
         needs: splitData.needs_pct,
@@ -136,7 +136,7 @@ function BudgetForm() {
     weekStart.setHours(0, 0, 0, 0);
 
     try {
-      const response = await fetch("http://localhost:8000/budget/split", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/split`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
