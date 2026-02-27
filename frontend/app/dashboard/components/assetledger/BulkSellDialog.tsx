@@ -89,9 +89,12 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                         {asset.category}
                       </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      Paid ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </span>
+                    <div className="text-right text-xs text-muted-foreground space-y-0.5">
+                      <div>Paid ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+                      {asset.market_value != null && (
+                        <div>Market ${asset.market_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+                      )}
+                    </div>
                   </div>
                   <Input
                     type="number"
@@ -105,6 +108,25 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                     }
                     required
                   />
+                  {bulkSalePrices[asset.id] && (() => {
+                    const sale = parseFloat(bulkSalePrices[asset.id]);
+                    const pl = sale - asset.purchase_price;
+                    const isProfit = pl >= 0;
+                    return (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        {isProfit
+                          ? <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                          : <TrendingDown className="h-3 w-3 text-red-500 dark:text-red-400" />
+                        }
+                        <span className={cn(
+                          "font-medium",
+                          isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                        )}>
+                          {isProfit ? "+" : ""}${pl.toLocaleString("en-US", { minimumFractionDigits: 2 })} {isProfit ? "Profit" : "Loss"}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -152,8 +174,8 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
           {Object.values(bulkSalePrices).some((p) => p) && (() => {
             const totalSale = Object.values(bulkSalePrices).reduce((s, p) => s + (parseFloat(p) || 0), 0);
             const totalCost = assets.reduce((s, a) => s + a.purchase_price, 0);
-            const net = totalSale - totalCost;
-            const isProfit = net >= 0;
+            const totalPL = totalSale - totalCost;
+            const isProfit = totalPL >= 0;
             return (
               <div className={cn(
                 "rounded-md border p-3 text-sm space-y-2",
@@ -173,13 +195,13 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                       ? <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                       : <TrendingDown className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                     }
-                    {isProfit ? "Total Net Profit" : "Total Net Loss"}
+                    {isProfit ? "Total Profit" : "Total Loss"}
                   </span>
                   <span className={cn(
                     "font-semibold",
                     isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
-                    {isProfit ? "+" : ""}${net.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {isProfit ? "+" : ""}${totalPL.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

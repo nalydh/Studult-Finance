@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, Package, Pencil, Trash2, Settings } from "lucide-react";
+import { DollarSign, Package, Pencil, Trash2, Settings, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type CategoryItem, type Asset, MAX_CATEGORY_TABS, COLOR_PALETTE, getCategoryColor,
@@ -43,6 +43,29 @@ export default function AssetLedger() {
   /* ── Selection & tab state ── */
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [selectedTab, setSelectedTab] = useState("All");
+
+  /* ── Sort state ── */
+  type SortKey = "name" | "purchase_price" | "market_value" | "date_acquired";
+  type SortDir = "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      if (sortDir === "asc") setSortDir("desc");
+      else { setSortKey(null); setSortDir("asc"); }
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  function SortIcon({ column }: { column: SortKey }) {
+    if (sortKey !== column) return <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="h-3.5 w-3.5 ml-1" />
+      : <ArrowDown className="h-3.5 w-3.5 ml-1" />;
+  }
 
   // ─── Data fetching ────────────────────────────────────────────────
   async function fetchCategories() {
@@ -123,7 +146,7 @@ export default function AssetLedger() {
 
   // ─── Asset handlers ───────────────────────────────────────────────
   async function handleAddAsset(data: {
-    name: string; category: string; purchase_price: number; date_acquired: string;
+    name: string; category: string; purchase_price: number; market_value: number | null; date_acquired: string;
   }) {
     const res = await fetch(`${API_BASE}/assets/`, {
       method: "POST",
@@ -136,7 +159,7 @@ export default function AssetLedger() {
   }
 
   async function handleEditAsset(id: number, data: {
-    name: string; category: string; purchase_price: number; date_acquired: string;
+    name: string; category: string; purchase_price: number; market_value: number | null; date_acquired: string;
   }) {
     const res = await fetch(`${API_BASE}/assets/${id}`, {
       method: "PUT",
@@ -216,6 +239,28 @@ export default function AssetLedger() {
     selectedTab === "All"
       ? activeAssets
       : activeAssets.filter((a) => a.category === selectedTab);
+
+  const sortedAssets = sortKey
+    ? [...filteredAssets].sort((a, b) => {
+        let cmp = 0;
+        switch (sortKey) {
+          case "name":
+            cmp = a.name.localeCompare(b.name);
+            break;
+          case "purchase_price":
+            cmp = a.purchase_price - b.purchase_price;
+            break;
+          case "market_value":
+            cmp = (a.market_value ?? 0) - (b.market_value ?? 0);
+            break;
+          case "date_acquired":
+            cmp = new Date(a.date_acquired).getTime() - new Date(b.date_acquired).getTime();
+            break;
+        }
+        return sortDir === "asc" ? cmp : -cmp;
+      })
+    : filteredAssets;
+
   const filteredValue = filteredAssets.reduce((sum, a) => sum + a.purchase_price, 0);
 
   // ─── Render ───────────────────────────────────────────────────────
@@ -315,15 +360,32 @@ export default function AssetLedger() {
                     aria-label="Select all"
                   />
                 </TableHead>
-                <TableHead>Name</TableHead>
+                <TableHead>
+                  <button type="button" onClick={() => handleSort("name")} className="inline-flex items-center hover:text-foreground transition-colors">
+                    Name <SortIcon column="name" />
+                  </button>
+                </TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Purchase Price</TableHead>
-                <TableHead className="text-right">Date Acquired</TableHead>
+                <TableHead className="text-right">
+                  <button type="button" onClick={() => handleSort("purchase_price")} className="inline-flex items-center ml-auto hover:text-foreground transition-colors">
+                    Purchase Price <SortIcon column="purchase_price" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right">
+                  <button type="button" onClick={() => handleSort("market_value")} className="inline-flex items-center ml-auto hover:text-foreground transition-colors">
+                    Market Value <SortIcon column="market_value" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right">
+                  <button type="button" onClick={() => handleSort("date_acquired")} className="inline-flex items-center ml-auto hover:text-foreground transition-colors">
+                    Date Acquired <SortIcon column="date_acquired" />
+                  </button>
+                </TableHead>
                 <TableHead className="text-right pr-6 w-[120px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAssets.map((asset) => {
+              {sortedAssets.map((asset) => {
                 const color = getCategoryColor(categories, asset.category);
                 return (
                   <TableRow
@@ -350,6 +412,11 @@ export default function AssetLedger() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {asset.market_value != null
+                        ? `$${asset.market_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {new Date(asset.date_acquired).toLocaleDateString("en-US", {
