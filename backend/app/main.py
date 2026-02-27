@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from sqlmodel import SQLModel
 from app.database import engine
 from app.routers import budget
+from app.routers import asset
+from app.routers import category
 
 def create_db_and_tables():
   SQLModel.metadata.create_all(engine)
@@ -19,7 +21,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=["http://localhost:3000"],
+  allow_origins=["http://localhost:3000", "http://localhost:3001"],
   allow_credentials=True,
   allow_methods=["*"],
   allow_headers=["*"],
@@ -27,3 +29,5 @@ app.add_middleware(
 
 # Include routers
 app.include_router(budget.router)
+app.include_router(asset.router)
+app.include_router(category.router)

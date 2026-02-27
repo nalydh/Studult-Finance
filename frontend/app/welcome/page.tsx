@@ -7,9 +7,10 @@ Budget Page:
 "use client";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import SplitSelector from "../../components/SplitSelector";
+import SplitSelector from "./components/SplitSelector";
 import { SPLIT_OPTIONS } from "../../components/StrategyPresets";
 import { CUSTOM_SPLIT_ID } from "../../components/StrategyPresets";
+import { useRouter } from "next/navigation";
 
 export interface BudgetForm {
   needsPct: string;
@@ -25,6 +26,7 @@ interface BudgetPayload {
 }
 
 function BudgetPage() {
+  const router = useRouter();
   const [form, setForm] = useState<BudgetForm>({
     needsPct: "",
     wantsPct: "",
@@ -100,6 +102,10 @@ function BudgetPage() {
 
       const data = await response.json();
       console.log("Received split:", data);
+
+      // Redirect to dashboard after successful submission
+      router.push("/dashboard");
+
     } catch (error) {
       console.error("POST ERROR:", error);
     }
