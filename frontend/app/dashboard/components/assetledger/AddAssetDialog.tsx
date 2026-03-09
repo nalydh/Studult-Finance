@@ -24,7 +24,7 @@ interface AddAssetDialogProps {
   onOpenChange: (open: boolean) => void;
   categories: CategoryItem[];
   selectedTab: string;
-  onSubmit: (data: { name: string; category: string; purchase_price: number; date_acquired: string }) => Promise<void>;
+  onSubmit: (data: { name: string; category: string; purchase_price: number; market_value: number | null; date_acquired: string }) => Promise<void>;
   onCreateCategory: (name: string, colorIndex: number) => Promise<void>;
   onDeleteCategory: (id: number) => Promise<void>;
 }
@@ -35,6 +35,7 @@ export function AddAssetDialog({
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newPrice, setNewPrice] = useState("");
+  const [newMarketValue, setNewMarketValue] = useState("");
   const [newDateAcquired, setNewDateAcquired] = useState<Date>(new Date());
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState("");
@@ -44,6 +45,7 @@ export function AddAssetDialog({
     setNewName("");
     setNewCategory("");
     setNewPrice("");
+    setNewMarketValue("");
     setNewDateAcquired(new Date());
     setIsCreatingCategory(false);
     setNewCategoryInput("");
@@ -102,6 +104,7 @@ export function AddAssetDialog({
         name: newName,
         category: newCategory,
         purchase_price: parseFloat(newPrice),
+        market_value: newMarketValue ? parseFloat(newMarketValue) : null,
         date_acquired: newDateAcquired.toISOString(),
       });
       resetForm();
@@ -323,6 +326,22 @@ export function AddAssetDialog({
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value)}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="asset-market-value">
+              Current Market Value{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="asset-market-value"
+              type="number"
+              step="0.01"
+              min="0"
+              prefix="$"
+              placeholder="0.00"
+              value={newMarketValue}
+              onChange={(e) => setNewMarketValue(e.target.value)}
             />
           </div>
           <DialogFooter>

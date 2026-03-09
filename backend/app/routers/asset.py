@@ -20,7 +20,7 @@ def insert_asset(data: Asset, session: Session = Depends(get_session)):
 @router.get("/")
 def get_assets(session: Session = Depends(get_session)):
     try:
-        statement = select(Asset)
+        statement = select(Asset).order_by(Asset.id)
         results = session.exec(statement).all()
         return results
     except Exception as error:

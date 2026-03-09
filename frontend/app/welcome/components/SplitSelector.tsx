@@ -19,6 +19,7 @@ interface SplitSelectorProps {
   handleSelect: (option: { id: number }) => void;
   handleChange: (e: ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  hideSubmit?: boolean;
 }
 
 function SplitSelector({
@@ -28,6 +29,7 @@ function SplitSelector({
   handleSelect,
   handleChange,
   handleSubmit,
+  hideSubmit = false,
 }: SplitSelectorProps) {
   const cardAreaRef = useRef(null);
   const submitButtonRef = useRef(null);
@@ -63,8 +65,8 @@ function SplitSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [setSelected]);
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  const content = (
+    <div className="space-y-4">
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-primary">
           Choose Your Strategy
@@ -161,17 +163,27 @@ function SplitSelector({
         <Tooltip id="split-tooltip" place="bottom" />
 
         {/* Submit Button */}
-        <button
-          type="submit"
-          ref={submitButtonRef}
-          disabled={submitDisabled}
-          className={`bg-primary-dark mt-4 text-white font-semibold py-2 px-6 rounded hover:bg-primary-light transition block mx-auto ${
-            submitDisabled ? "disabled cursor-not-allowed opacity-60" : ""
-          }`}
-        >
-          Submit
-        </button>
+        {!hideSubmit && (
+          <button
+            type="submit"
+            ref={submitButtonRef}
+            disabled={submitDisabled}
+            className={`bg-primary-dark mt-4 text-white font-semibold py-2 px-6 rounded hover:bg-primary-light transition block mx-auto ${
+              submitDisabled ? "disabled cursor-not-allowed opacity-60" : ""
+            }`}
+          >
+            Submit
+          </button>
+        )}
       </div>
+    </div>
+  );
+
+  if (hideSubmit) return content;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {content.props.children}
     </form>
   );
 }

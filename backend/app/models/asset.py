@@ -8,6 +8,7 @@ class Asset(SQLModel, table=True):
   name: str
   category: str
   purchase_price: float
+  market_value: float | None = None
   is_sold: bool = Field(default=False)
   sale_price: float | None = None
   date_acquired: datetime = Field(default_factory=datetime.now)
@@ -24,4 +25,5 @@ class AssetUpdate(SQLModel):
   name: str | None = None
   category: str | None = None
   purchase_price: float | None = None
+  market_value: float | None = None
   date_acquired: datetime | None = None

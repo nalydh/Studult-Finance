@@ -29,14 +29,16 @@ interface BudgetSettingsProps {
     wants: number;
     savings: number;
   };
+  currentWeekStartsOn?: string;
+  currentIncomeType?: string;
   onSplitUpdated?: () => void;
 }
 
-export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsProps) {
+export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", currentIncomeType = "Salary", onSplitUpdated }: BudgetSettingsProps) {
   const [open, setOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
-  const [weekStartDay, setWeekStartDay] = useState("monday");
-  const [incomeType, setIncomeType] = useState("salary");
+  const [weekStartDay, setWeekStartDay] = useState(currentWeekStartsOn.toLowerCase());
+  const [incomeType, setIncomeType] = useState(currentIncomeType.toLowerCase());
   const [error, setError] = useState("");
   
   // Form state for SplitSelector component
@@ -54,6 +56,8 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
         wantsPct: currentSplit.wants.toString(),
         savingsPct: currentSplit.savings.toString(),
       });
+      setWeekStartDay(currentWeekStartsOn.toLowerCase());
+      setIncomeType(currentIncomeType.toLowerCase());
       
       // Check if current split matches a preset
       const matchingPreset = SPLIT_OPTIONS.find(
@@ -64,7 +68,7 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
       
       setSelectedPreset(matchingPreset ? matchingPreset.id : CUSTOM_SPLIT_ID);
     }
-  }, [open, currentSplit]);
+  }, [open, currentSplit, currentWeekStartsOn, currentIncomeType]);
 
   function handleSelect(option: { id: number }) {
     setSelectedPreset(option.id);
@@ -99,7 +103,7 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
     }
 
     try {
-      const response = await fetch("http://localhost:8000/budget/preferences", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -108,6 +112,8 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
           needs_pct: needs,
           wants_pct: wants,
           savings_pct: savings,
+          week_starts_on: weekStartDay.charAt(0).toUpperCase() + weekStartDay.slice(1),
+          income_type: incomeType.charAt(0).toUpperCase() + incomeType.slice(1),
         }),
       });
 
@@ -154,7 +160,8 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
               setSelected={setSelectedPreset}
               handleSelect={handleSelect}
               handleChange={handleChange}
-              handleSubmit={(e) => e.preventDefault()} // Prevent default, we handle submit below
+              handleSubmit={(e) => e.preventDefault()}
+              hideSubmit
             />
           </div>
 
