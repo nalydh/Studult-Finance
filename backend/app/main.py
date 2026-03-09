@@ -8,7 +8,6 @@ from app.routers import asset
 from app.routers import category
 from app.routers import snapshots
 from app.routers import accounts
-from app.models.account import Account 
 
 def create_db_and_tables():
   SQLModel.metadata.create_all(engine)
