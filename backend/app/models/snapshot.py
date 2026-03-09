@@ -1,18 +1,15 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
+from typing import Optional
 
 
 class NetWorthSnapshot(SQLModel, table=True):
-  id: int | None = Field(default=None, primary_key=True)
-  snapshot_date: datetime = Field(default_factory=datetime.now)
-  liquid_cash: float
-  investments: float
-  liabilities: float
-  ledger_assets_value: float
-  total_net_worth: float
+    id: Optional[int] = Field(default=None, primary_key=True)
+    snapshot_date: datetime = Field(default_factory=datetime.now)
 
-
-class SnapshotCreate(SQLModel):
-  liquid_cash: float
-  investments: float
-  liabilities: float
+    # Completely calculated by the backend
+    total_cash: float
+    total_investments: float
+    total_liabilities: float
+    total_assets: float
+    net_worth: float
