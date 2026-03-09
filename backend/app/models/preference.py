@@ -6,4 +6,6 @@ class Preference(SQLModel, table=True):
   needs_pct: float
   wants_pct: float
   savings_pct: float
+  week_starts_on: str = Field(default="Monday")
+  income_type: str = Field(default="Salary")
   

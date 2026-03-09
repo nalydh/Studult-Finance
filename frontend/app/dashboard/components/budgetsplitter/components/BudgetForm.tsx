@@ -20,7 +20,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PiggyBankIcon, TrendingUp, Wallet, Settings2 } from "lucide-react";
+import { PiggyBankIcon, TrendingUp, Wallet, Settings2, Lock } from "lucide-react";
 import { BreakdownSheet } from "./BreakdownSheet";
 import { BudgetSettings } from "./BudgetSettings";
 import { startOfWeek, endOfWeek, format } from "date-fns";
@@ -40,11 +40,14 @@ export interface BudgetItem {
 
 function BudgetForm() {
   const [income, setIncome] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [splitData, setSplitData] = useState<SplitData>({
     needs: 0,
     wants: 0,
     savings: 0,
   });
+  const [weekStartsOn, setWeekStartsOn] = useState("Monday");
+  const [incomeType, setIncomeType] = useState("Salary");
   const [splitAmounts, setSplitAmounts] = useState<SplitData>({
     needs: 0,
     wants: 0,
@@ -52,6 +55,7 @@ function BudgetForm() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
+  const [isLockedOut, setIsLockedOut] = useState(false);
 
   // Fetch user's split preferences on mount and budget items
   useEffect(() => {
@@ -65,10 +69,25 @@ function BudgetForm() {
           wants: splitData.wants_pct,
           savings: splitData.savings_pct,
         });
+        if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
+        if (splitData.income_type) setIncomeType(splitData.income_type);
 
         const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
         const itemsData = await itemsResult.json();
         setBudgetItems(itemsData);
+
+        // Check if a split already exists this week
+        const weekResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/current-week-split`);
+        const weekData = await weekResult.json();
+        if (weekData && weekData.id) {
+          setIsLockedOut(true);
+          setIncome(weekData.amount.toString());
+          setSplitAmounts({
+            needs: weekData.needs_allocated,
+            wants: weekData.wants_allocated,
+            savings: weekData.savings_allocated,
+          });
+        }
       } catch (error) {
         console.error("Error fetching split: ", error);
       } finally {
@@ -119,6 +138,8 @@ function BudgetForm() {
         wants: splitData.wants_pct,
         savings: splitData.savings_pct,
       });
+      if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
+      if (splitData.income_type) setIncomeType(splitData.income_type);
     } catch (error) {
       console.error("Error refreshing split preferences:", error);
     }
@@ -126,6 +147,7 @@ function BudgetForm() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSubmitError(null);
 
     // Calculate week start (Monday) in UTC
     const now = new Date();
@@ -136,34 +158,41 @@ function BudgetForm() {
     weekStart.setHours(0, 0, 0, 0);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/split`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/calculate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          income: Number(income),
-          needs_pct: splitData.needs,
-          wants_pct: splitData.wants,
-          savings_pct: splitData.savings,
-          week_start: weekStart.toISOString(), // Send UTC timestamp
+          amount: Number(income),
+          source: "Salary",
+          strategy_name: "",
+          needs_allocated: 0,
+          wants_allocated: 0,
+          savings_allocated: 0,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Backend returned ${response.status}`);
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.detail || `Backend returned ${response.status}`;
+        setSubmitError(message);
+        return;
       }
 
       const data = await response.json();
       console.log("Received split:", data);
 
       setSplitAmounts({
-        needs: data.needs,
-        wants: data.wants,
-        savings: data.savings,
+        needs: data.needs_allocated,
+        wants: data.wants_allocated,
+        savings: data.savings_allocated,
       });
+
+      setIsLockedOut(true);
     } catch (error) {
       console.error("POST ERROR:", error);
+      setSubmitError("Something went wrong. Please try again.");
     }
   }
 
@@ -204,8 +233,8 @@ function BudgetForm() {
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Card className="w-full max-w-md mx-auto">
+    <form onSubmit={handleSubmit}>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-center text-2xl font-bold">
             Weekly Budget Splitter
@@ -228,6 +257,7 @@ function BudgetForm() {
               placeholder="0.00"
               pattern="[0-9]*\.?[0-9]*"
               className="focus-visible:ring-primary-light"
+              disabled={isLockedOut}
             />
           </div>
 
@@ -332,10 +362,17 @@ function BudgetForm() {
             </div>
           </div>
               <hr/>
+          {submitError && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {submitError}
+            </div>
+          )}
           <div className="flex gap-3">
             <div className="shrink-0">
             <BudgetSettings 
-              currentSplit={splitData} 
+              currentSplit={splitData}
+              currentWeekStartsOn={weekStartsOn}
+              currentIncomeType={incomeType}
               onSplitUpdated={refreshSplitPreferences}
             />
             </div>
@@ -343,8 +380,16 @@ function BudgetForm() {
             <Button
               type="submit"
               className="w-full bg-primary-dark hover:bg-primary-light"
+              disabled={isLockedOut}
             >
-              Submit
+              {isLockedOut ? (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Already Submitted This Week
+                </>
+              ) : (
+                "Submit"
+              )}
             </Button>
             </div>
           </div>
