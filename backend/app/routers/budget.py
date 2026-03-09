@@ -1,9 +1,16 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models.preference import Preference
 from app.models.incomeevent import IncomeEvent
 from app.models.budgetitem import BudgetItem
+
+
+class BudgetItemUpdate(BaseModel):
+    name: str | None = None
+    amount: float | None = None
 
 router = APIRouter(prefix="/budget", tags=["budget"])
 
@@ -61,6 +68,23 @@ def delete_budget_item(item_id: int, session: Session = Depends(get_session)):
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
     
+@router.put("/items/{item_id}")
+def update_budget_item(item_id: int, data: BudgetItemUpdate, session: Session = Depends(get_session)):
+    statement = select(BudgetItem).where(BudgetItem.id == item_id)
+    item = session.exec(statement).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if data.name is not None:
+        item.name = data.name
+    if data.amount is not None:
+        item.amount = data.amount
+
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
 @router.get("/items")
 def get_budget_items(session: Session = Depends(get_session)):
     try:
@@ -70,9 +94,40 @@ def get_budget_items(session: Session = Depends(get_session)):
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
+@router.get("/current-week-split")
+def get_current_week_split(session: Session = Depends(get_session)):
+    """Return the IncomeEvent for this Mon–Sun week, or null if none exists."""
+    now = datetime.now()
+    start_of_week = now - timedelta(days=now.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    existing = session.exec(
+        select(IncomeEvent).where(IncomeEvent.date >= start_of_week)
+    ).first()
+
+    if existing:
+        return existing
+    return None
+
 @router.post("/calculate")
 def calculate_and_insert_budget(income_event: IncomeEvent, session: Session = Depends(get_session)):
     try:
+        # ── Weekly Time Fence: block duplicate splits in the same Mon→Sun week ──
+        now = datetime.now()
+        start_of_week = now - timedelta(days=now.weekday())          # Monday
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        existing_split = session.exec(
+            select(IncomeEvent).where(IncomeEvent.date >= start_of_week)
+        ).first()
+
+        if existing_split:
+            raise HTTPException(
+                status_code=400,
+                detail="You have already logged a split this week. Please edit your accounts manually if you need to make corrections."
+            )
+        # ─────────────────────────────────────────────────────────────────────────
+
         pref_statement = select(Preference).limit(1)
         preferences = session.exec(pref_statement).first()
         if not preferences:
