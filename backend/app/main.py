@@ -16,9 +16,9 @@ from app.routers import accounts
 from app.routers import analytics
 from app.routers import investmentcontributions
 from app.routers import auth
-from app.models import investmentcontribution 
-from app.models import user  
-from app.models import emailtoken  
+from app.models import investmentcontribution
+from app.models import user
+from app.models import emailtoken
 
 
 limiter = Limiter(key_func=get_remote_address)
@@ -38,15 +38,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Attach slowapi limiter + 429 handler
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# Allow localhost for dev + production frontend from APP_URL env var
-_app_url = os.getenv("APP_URL", "").rstrip("/")
+# ── CORS origins ──────────────────────────────────────────────────────────────
+# Set APP_URLS in Railway as a comma-separated list, e.g.:
+#   https://stufin.starkandco.site,https://preview.stufin.starkandco.site
+# Also supports the legacy single-value APP_URL variable.
 _allowed_origins = ["http://localhost:3000", "http://localhost:3001"]
-if _app_url and _app_url not in _allowed_origins:
-    _allowed_origins.append(_app_url)
+for _url in os.getenv("APP_URLS", os.getenv("APP_URL", "")).split(","):
+    _url = _url.strip().rstrip("/")
+    if _url and _url not in _allowed_origins:
+        _allowed_origins.append(_url)
+
+# This prints to Railway logs — confirms exactly what origins the running
+# instance sees. Check Deployments → Logs after your next deploy.
+print(f"[CORS] Allowed origins: {_allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,7 +58,34 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# ── Rate limiter ──────────────────────────────────────────────────────────────
+# Patched handler so that a rate-limited preflight OPTIONS request still gets
+# the Access-Control-Allow-Origin header back. Without this, slowapi's default
+# JSONResponse bypasses CORSMiddleware and the browser sees a CORS failure
+# instead of a 429.
+app.state.limiter = limiter
+
+
+def _cors_aware_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    origin = request.headers.get("origin", "")
+    headers: dict[str, str] = {}
+    if hasattr(exc, "retry_after"):
+        headers["Retry-After"] = str(exc.retry_after)
+    if origin in _allowed_origins:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Vary"] = "Origin"
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Rate limit exceeded: {exc.detail}"},
+        headers=headers,
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _cors_aware_rate_limit_handler)
 
 # Include routers
 app.include_router(budget.router)
