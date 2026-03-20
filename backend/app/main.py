@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -41,9 +42,15 @@ app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Allow localhost for dev + production frontend from APP_URL env var
+_app_url = os.getenv("APP_URL", "").rstrip("/")
+_allowed_origins = ["http://localhost:3000", "http://localhost:3001"]
+if _app_url and _app_url not in _allowed_origins:
+    _allowed_origins.append(_app_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
