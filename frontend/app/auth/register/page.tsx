@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -21,15 +21,20 @@ function GoogleIcon() {
 }
 
 /* ── Password strength indicator ── */
+export const PASSWORD_CHECKS = [
+  { label: "8+ characters",   test: (p: string) => p.length >= 8 },
+  { label: "Uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "Number",          test: (p: string) => /[0-9]/.test(p) },
+];
+
+export function passwordValid(password: string): boolean {
+  return PASSWORD_CHECKS.every((c) => c.test(password));
+}
+
 function PasswordStrength({ password }: { password: string }) {
   if (!password) return null;
 
-  const checks = [
-    { label: "8+ characters", pass: password.length >= 8 },
-    { label: "Uppercase letter", pass: /[A-Z]/.test(password) },
-    { label: "Number", pass: /[0-9]/.test(password) },
-  ];
-
+  const checks = PASSWORD_CHECKS.map((c) => ({ label: c.label, pass: c.test(password) }));
   const passed = checks.filter((c) => c.pass).length;
   const strengthColor =
     passed === 0 ? "bg-zinc-200"
@@ -56,10 +61,12 @@ function PasswordStrength({ password }: { password: string }) {
           <span
             key={label}
             className={`flex items-center gap-1 text-xs transition-colors ${
-              pass ? "text-emerald-600" : "text-zinc-400"
+              pass ? "text-emerald-600" : "text-red-400"
             }`}
           >
-            <CheckCircle2 className={`h-3 w-3 ${pass ? "text-emerald-500" : "text-zinc-300"}`} />
+            {pass
+              ? <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+              : <XCircle className="h-3 w-3 text-red-400" />}
             {label}
           </span>
         ))}
@@ -79,6 +86,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = email.trim().length > 0 && passwordValid(password);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -306,8 +315,8 @@ export default function RegisterPage() {
             <button
               id="register-submit-button"
               type="submit"
-              disabled={isLoading || googleLoading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white py-2.5 text-sm font-semibold transition-all duration-200 shadow-sm disabled:opacity-50 group mt-2"
+              disabled={isLoading || googleLoading || !canSubmit}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white py-2.5 text-sm font-semibold transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed group mt-2"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

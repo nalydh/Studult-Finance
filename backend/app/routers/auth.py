@@ -1,4 +1,5 @@
 import secrets
+import re
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -87,6 +88,22 @@ def _create_reset_token(user_id: int, session: Session) -> str:
     return token
 
 
+def _validate_password(password: str) -> str | None:
+    """
+    Returns an error message string if invalid, or None if the password is fine.
+    Requirements match the frontend strength indicator.
+    """
+    if len(password) < 8:
+        return "Password must be at least 8 characters."
+    if len(password) > 128:
+        return "Password cannot exceed 128 characters."
+    if not re.search(r"[A-Z]", password):
+        return "Password must contain at least one uppercase letter."
+    if not re.search(r"[0-9]", password):
+        return "Password must contain at least one number."
+    return None
+
+
 # ── Endpoints ────────────────────────────────────────────────────
 
 @router.post("/register")
@@ -95,6 +112,10 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
     existing = session.exec(select(User).where(User.email == req.email)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    error = _validate_password(req.password)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
     user = User(
         email=req.email,
