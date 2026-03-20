@@ -8,6 +8,8 @@ const PRODUCT_LINKS = [
 
 const COMPANY_LINKS = [
   { label: "About", href: "/about" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Privacy Policy", href: "/privacy" },
 ];
 
 export default function Footer() {
@@ -90,9 +92,17 @@ export default function Footer() {
           <p className="text-xs text-zinc-600">
             &copy; {year} StuFin &mdash; Built for students &amp; young adults.
           </p>
-          <span className="text-xs text-zinc-700">
-            Manual first. Always.
-          </span>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="text-xs text-zinc-700 hover:text-zinc-400 transition-colors">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-xs text-zinc-700 hover:text-zinc-400 transition-colors">
+              Privacy
+            </Link>
+            <span className="text-xs text-zinc-700">
+              Manual first. Always.
+            </span>
+          </div>
         </div>
       </div>
 
