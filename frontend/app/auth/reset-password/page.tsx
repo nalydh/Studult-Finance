@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Loader2, CheckCircle2, Eye, EyeOff, XCircle } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 function ResetPasswordForm() {
   const router = useRouter();

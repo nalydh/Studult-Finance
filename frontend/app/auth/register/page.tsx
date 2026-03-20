@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 /* ── Google SVG Icon ── */
 function GoogleIcon() {

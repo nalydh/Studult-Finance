@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle2, Mail } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
