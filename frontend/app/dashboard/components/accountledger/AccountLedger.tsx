@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, FormEvent } from "react";
+import React, { useState, useEffect, useCallback, FormEvent } from "react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -74,7 +74,7 @@ export default function AccountLedger() {
   const [editBalance, setEditBalance] = useState("");
   const [editContributions, setEditContributions] = useState("");
 
-  async function fetchAccounts() {
+  const fetchAccounts = useCallback(async () => {
     try {
       const res = await authFetch("/accounts/");
       const data = await res.json();
@@ -84,9 +84,9 @@ export default function AccountLedger() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [authFetch]);
 
-  useEffect(() => { fetchAccounts(); }, [authFetch]);
+  useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
 
   // ─── Add ──────────────────────────────────────────────────────────
   function resetAddForm() {

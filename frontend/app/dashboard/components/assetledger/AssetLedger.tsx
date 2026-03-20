@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -64,7 +64,7 @@ export default function AssetLedger() {
       : <ArrowDown className="h-3.5 w-3.5 ml-1" />;
   }
 
-  async function fetchCategories() {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await authFetch("/categories/");
       const data = await res.json();
@@ -78,9 +78,9 @@ export default function AssetLedger() {
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
-  }
+  }, [authFetch]);
 
-  async function fetchAssets() {
+  const fetchAssets = useCallback(async () => {
     try {
       const res = await authFetch("/assets/");
       const data = await res.json();
@@ -90,12 +90,12 @@ export default function AssetLedger() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [authFetch]);
 
   useEffect(() => {
     fetchCategories();
     fetchAssets();
-  }, [authFetch]);
+  }, [fetchCategories, fetchAssets]);
 
   // ─── Category handlers ────────────────────────────────────────────
   async function handleCreateCategory(name: string, colorIndex: number) {
