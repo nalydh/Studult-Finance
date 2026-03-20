@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Footer from "@/components/Footer";
-import { Mail, Github, ArrowRight, Heart, Shield, BookOpen } from "lucide-react";
+import { Mail, ArrowRight, Heart, Shield, BookOpen } from "lucide-react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -115,10 +115,10 @@ export default function AboutPage() {
               Please reach out via email.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {/* Email */}
               <a
-                href="mailto:support@stufin.app"
+                href="mailto:stufinsupport@gmail.com"
                 className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 hover:border-emerald-300 hover:shadow-sm transition-all duration-200"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 group-hover:bg-emerald-100 transition-colors">
@@ -126,26 +126,9 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">Email support</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">support@stufin.app</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">stufinsupport@gmail.com</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-zinc-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 ml-auto transition-all" />
-              </a>
-
-              {/* GitHub */}
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 hover:border-zinc-400 hover:shadow-sm transition-all duration-200"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 group-hover:bg-zinc-200 transition-colors">
-                  <Github className="h-5 w-5 text-zinc-700" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900">GitHub</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">Issues &amp; feature requests</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-zinc-300 group-hover:text-zinc-600 group-hover:translate-x-0.5 ml-auto transition-all" />
               </a>
             </div>
 
