@@ -64,11 +64,21 @@ export function SellAssetDialog({ open, onOpenChange, asset, onSubmit }: SellAss
           </div>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-md bg-muted p-3 text-sm">
-            <span className="text-muted-foreground">Purchased for </span>
-            <span className="font-medium">
-              ${asset?.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </span>
+          <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Purchased for</span>
+              <span className="font-medium">
+                ${asset?.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Current Market Value</span>
+              <span className="font-medium">
+                {asset?.market_value != null
+                  ? `$${asset.market_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                  : "—"}
+              </span>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="sale-price">Sale Price</Label>
@@ -126,30 +136,51 @@ export function SellAssetDialog({ open, onOpenChange, asset, onSubmit }: SellAss
           </div>
 
           {salePrice && asset && (() => {
-            const net = parseFloat(salePrice) - asset.purchase_price;
-            const isProfit = net >= 0;
+            const salePriceNum = parseFloat(salePrice);
+            const netVsPurchase = salePriceNum - asset.purchase_price;
+            const isProfitVsPurchase = netVsPurchase >= 0;
+            const hasMarket = asset.market_value != null;
+            const netVsMarket = hasMarket ? salePriceNum - asset.market_value! : 0;
+            const isProfitVsMarket = netVsMarket >= 0;
             return (
               <div className={cn(
-                "rounded-md border p-3 text-sm space-y-1",
-                isProfit
+                "rounded-md border p-3 text-sm space-y-2",
+                isProfitVsPurchase
                   ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40"
                   : "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40"
               )}>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-muted-foreground">
-                    {isProfit
+                    {isProfitVsPurchase
                       ? <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                       : <TrendingDown className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                     }
-                    {isProfit ? "Net Profit" : "Net Loss"}
+                    vs. Purchase Price
                   </span>
                   <span className={cn(
                     "font-semibold",
-                    isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                    isProfitVsPurchase ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
-                    {isProfit ? "+" : ""}${net.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {isProfitVsPurchase ? "+" : ""}${netVsPurchase.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
+                {hasMarket && (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    {isProfitVsMarket
+                      ? <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      : <TrendingDown className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                    }
+                    vs. Market Value
+                  </span>
+                  <span className={cn(
+                    "font-semibold",
+                    isProfitVsMarket ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                  )}>
+                    {isProfitVsMarket ? "+" : ""}${netVsMarket.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                )}
               </div>
             );
           })()}

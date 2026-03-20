@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,14 +30,17 @@ interface BudgetSettingsProps {
     wants: number;
     savings: number;
   };
+  currentWeekStartsOn?: string;
+  currentIncomeType?: string;
   onSplitUpdated?: () => void;
 }
 
-export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsProps) {
+export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", currentIncomeType = "Salary", onSplitUpdated }: BudgetSettingsProps) {
+  const authFetch = useAuthFetch();
   const [open, setOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
-  const [weekStartDay, setWeekStartDay] = useState("monday");
-  const [incomeType, setIncomeType] = useState("salary");
+  const [weekStartDay, setWeekStartDay] = useState(currentWeekStartsOn.toLowerCase());
+  const [incomeType, setIncomeType] = useState(currentIncomeType.toLowerCase());
   const [error, setError] = useState("");
   
   // Form state for SplitSelector component
@@ -54,6 +58,8 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
         wantsPct: currentSplit.wants.toString(),
         savingsPct: currentSplit.savings.toString(),
       });
+      setWeekStartDay(currentWeekStartsOn.toLowerCase());
+      setIncomeType(currentIncomeType.toLowerCase());
       
       // Check if current split matches a preset
       const matchingPreset = SPLIT_OPTIONS.find(
@@ -64,7 +70,7 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
       
       setSelectedPreset(matchingPreset ? matchingPreset.id : CUSTOM_SPLIT_ID);
     }
-  }, [open, currentSplit]);
+  }, [open, currentSplit, currentWeekStartsOn, currentIncomeType]);
 
   function handleSelect(option: { id: number }) {
     setSelectedPreset(option.id);
@@ -92,22 +98,32 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    
+    e.stopPropagation();
+
     if (!isValid) {
       setError("Percentages must add up to 100% and all must be greater than 0");
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:8000/budget/preferences", {
+      // Determine the strategy name to send
+      let strategyName = "Custom";
+      if (selectedPreset !== CUSTOM_SPLIT_ID) {
+        const selectedOption = SPLIT_OPTIONS.find(opt => opt.id === selectedPreset);
+        if (selectedOption) {
+          strategyName = selectedOption.label;
+        }
+      }
+
+      const response = await authFetch("/budget/preferences", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
+          strategy_name: strategyName,
           needs_pct: needs,
           wants_pct: wants,
           savings_pct: savings,
+          week_starts_on: weekStartDay.charAt(0).toUpperCase() + weekStartDay.slice(1),
+          income_type: incomeType.charAt(0).toUpperCase() + incomeType.slice(1),
         }),
       });
 
@@ -131,7 +147,7 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" type="button">
           <SlidersHorizontal className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -154,7 +170,8 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
               setSelected={setSelectedPreset}
               handleSelect={handleSelect}
               handleChange={handleChange}
-              handleSubmit={(e) => e.preventDefault()} // Prevent default, we handle submit below
+              handleSubmit={(e) => e.preventDefault()}
+              hideSubmit
             />
           </div>
 
@@ -162,7 +179,7 @@ export function BudgetSettings({ currentSplit, onSplitUpdated }: BudgetSettingsP
           <div className="border-t" />
 
           {/* General Preferences Section */}
-          <div className="space-y-4 bg-gray-50 p-4 rounded-lg border">
+          <div className="space-y-4 bg-white p-4 rounded-lg border">
             <h3 className="font-semibold text-sm uppercase tracking-wide">
               General Preferences
             </h3>

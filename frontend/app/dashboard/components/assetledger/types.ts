@@ -25,6 +25,7 @@ export interface Asset {
   name: string;
   category: string;
   purchase_price: number;
+  market_value: number | null;
   is_sold: boolean;
   sale_price: number | null;
   date_acquired: string;

@@ -5,6 +5,7 @@ BudgetForm Component:
 */
 
 import React, { FormEvent, ChangeEvent, useState, useEffect } from "react";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PiggyBankIcon, TrendingUp, Wallet, Settings2 } from "lucide-react";
+import { PiggyBankIcon, TrendingUp, Wallet, Settings2, Lock } from "lucide-react";
 import { BreakdownSheet } from "./BreakdownSheet";
 import { BudgetSettings } from "./BudgetSettings";
 import { startOfWeek, endOfWeek, format } from "date-fns";
@@ -36,15 +37,32 @@ export interface BudgetItem {
   name: string;
   amount: number;
   category: "Needs" | "Wants" | "Savings";
+  frequency?: "weekly" | "monthly" | "annually";
+}
+
+function toWeeklyAmount(amount: number, frequency: BudgetItem["frequency"]) {
+  if (frequency === "monthly") return (amount * 12) / 52;
+  if (frequency === "annually") return amount / 52;
+  return amount;
+}
+
+function frequencyLabel(frequency: BudgetItem["frequency"]) {
+  if (frequency === "monthly") return "month";
+  if (frequency === "annually") return "year";
+  return "week";
 }
 
 function BudgetForm() {
+  const authFetch = useAuthFetch();
   const [income, setIncome] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [splitData, setSplitData] = useState<SplitData>({
     needs: 0,
     wants: 0,
     savings: 0,
   });
+  const [weekStartsOn, setWeekStartsOn] = useState("Monday");
+  const [incomeType, setIncomeType] = useState("Salary");
   const [splitAmounts, setSplitAmounts] = useState<SplitData>({
     needs: 0,
     wants: 0,
@@ -52,12 +70,13 @@ function BudgetForm() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
+  const [isLockedOut, setIsLockedOut] = useState(false);
 
   // Fetch user's split preferences on mount and budget items
   useEffect(() => {
     async function fetchSplit() {
       try {
-        const splitResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`);
+        const splitResult = await authFetch("/budget/preferences");
         const splitData = await splitResult.json();
 
         setSplitData({
@@ -65,10 +84,25 @@ function BudgetForm() {
           wants: splitData.wants_pct,
           savings: splitData.savings_pct,
         });
+        if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
+        if (splitData.income_type) setIncomeType(splitData.income_type);
 
-        const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
+        const itemsResult = await authFetch("/budget/items");
         const itemsData = await itemsResult.json();
-        setBudgetItems(itemsData);
+        setBudgetItems(Array.isArray(itemsData) ? itemsData : []);
+
+        // Check if a split already exists this week
+        const weekResult = await authFetch("/budget/current-week-split");
+        const weekData = await weekResult.json();
+        if (weekData && weekData.id) {
+          setIsLockedOut(true);
+          setIncome(weekData.amount.toString());
+          setSplitAmounts({
+            needs: weekData.needs_allocated,
+            wants: weekData.wants_allocated,
+            savings: weekData.savings_allocated,
+          });
+        }
       } catch (error) {
         console.error("Error fetching split: ", error);
       } finally {
@@ -76,7 +110,7 @@ function BudgetForm() {
       }
     }
     fetchSplit();
-  }, []);
+  }, [authFetch]);
 
   // Calculate splits in real-time as user types
   useEffect(() => {
@@ -102,9 +136,9 @@ function BudgetForm() {
 
   async function refreshBudgetItems() {
     try {
-      const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
+      const itemsResult = await authFetch("/budget/items");
       const itemsData = await itemsResult.json();
-      setBudgetItems(itemsData);
+      setBudgetItems(Array.isArray(itemsData) ? itemsData : []);
     } catch (error) {
       console.error("Error refreshing budget items:", error);
     }
@@ -112,13 +146,15 @@ function BudgetForm() {
 
   async function refreshSplitPreferences() {
     try {
-      const splitResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`);
+      const splitResult = await authFetch("/budget/preferences");
       const splitData = await splitResult.json();
       setSplitData({
         needs: splitData.needs_pct,
         wants: splitData.wants_pct,
         savings: splitData.savings_pct,
       });
+      if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
+      if (splitData.income_type) setIncomeType(splitData.income_type);
     } catch (error) {
       console.error("Error refreshing split preferences:", error);
     }
@@ -126,6 +162,7 @@ function BudgetForm() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSubmitError(null);
 
     // Calculate week start (Monday) in UTC
     const now = new Date();
@@ -136,34 +173,38 @@ function BudgetForm() {
     weekStart.setHours(0, 0, 0, 0);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/split`, {
+      const response = await authFetch("/budget/calculate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
-          income: Number(income),
-          needs_pct: splitData.needs,
-          wants_pct: splitData.wants,
-          savings_pct: splitData.savings,
-          week_start: weekStart.toISOString(), // Send UTC timestamp
+          amount: Number(income),
+          source: "Salary",
+          strategy_name: "",
+          needs_allocated: 0,
+          wants_allocated: 0,
+          savings_allocated: 0,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Backend returned ${response.status}`);
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.detail || `Backend returned ${response.status}`;
+        setSubmitError(message);
+        return;
       }
 
       const data = await response.json();
       console.log("Received split:", data);
 
       setSplitAmounts({
-        needs: data.needs,
-        wants: data.wants,
-        savings: data.savings,
+        needs: data.needs_allocated,
+        wants: data.wants_allocated,
+        savings: data.savings_allocated,
       });
+
+      setIsLockedOut(true);
     } catch (error) {
       console.error("POST ERROR:", error);
+      setSubmitError("Something went wrong. Please try again.");
     }
   }
 
@@ -204,8 +245,8 @@ function BudgetForm() {
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Card className="w-full max-w-md mx-auto">
+    <form onSubmit={handleSubmit}>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-center text-2xl font-bold">
             Weekly Budget Splitter
@@ -228,6 +269,7 @@ function BudgetForm() {
               placeholder="0.00"
               pattern="[0-9]*\.?[0-9]*"
               className="focus-visible:ring-primary-light"
+              disabled={isLockedOut}
             />
           </div>
 
@@ -243,7 +285,7 @@ function BudgetForm() {
               {walletTypes.map((wallet) => {
                 // Calculate unallocated amount
                 const totalItemized = wallet.items.reduce(
-                  (acc, item) => acc + item.amount,
+                  (acc, item) => acc + toWeeklyAmount(item.amount, item.frequency),
                   0
                 );
                 const unallocated = wallet.value - totalItemized;
@@ -283,12 +325,20 @@ function BudgetForm() {
                                 {wallet.items.map((item) => (
                                   <div
                                     key={item.id}
-                                    className="flex justify-between text-muted-foreground"
+                                    className="flex items-start justify-between gap-3 text-muted-foreground"
                                   >
-                                    <span>{item.name}</span>
-                                    <span className="font-code">
-                                      ${item.amount.toFixed(2)}
-                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="truncate">{item.name}</p>
+                                      <p className="text-[11px] text-muted-foreground/90">
+                                        ${item.amount.toFixed(2)} / {frequencyLabel(item.frequency)}
+                                      </p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="font-code text-foreground">
+                                        ${toWeeklyAmount(item.amount, item.frequency).toFixed(2)}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground">per week</p>
+                                    </div>
                                   </div>
                                 ))}
                                 <div className="flex justify-between pt-2 border-t font-semibold">
@@ -332,10 +382,17 @@ function BudgetForm() {
             </div>
           </div>
               <hr/>
+          {submitError && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {submitError}
+            </div>
+          )}
           <div className="flex gap-3">
             <div className="shrink-0">
             <BudgetSettings 
-              currentSplit={splitData} 
+              currentSplit={splitData}
+              currentWeekStartsOn={weekStartsOn}
+              currentIncomeType={incomeType}
               onSplitUpdated={refreshSplitPreferences}
             />
             </div>
@@ -343,8 +400,16 @@ function BudgetForm() {
             <Button
               type="submit"
               className="w-full bg-primary-dark hover:bg-primary-light"
+              disabled={isLockedOut}
             >
-              Submit
+              {isLockedOut ? (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Already Submitted This Week
+                </>
+              ) : (
+                "Submit"
+              )}
             </Button>
             </div>
           </div>
