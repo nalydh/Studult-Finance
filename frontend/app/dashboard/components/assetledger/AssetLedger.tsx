@@ -20,14 +20,14 @@ import { SellAssetDialog } from "./SellAssetDialog";
 import { BulkSellDialog } from "./BulkSellDialog";
 import { ManageCategoriesDialog } from "./ManageCategoriesDialog";
 import { API_BASE } from "@/lib/api";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 export default function AssetLedger() {
-  /* ── Core data state ── */
+  const authFetch = useAuthFetch();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
 
-  /* ── Dialog open states ── */
   const [addOpen, setAddOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
   const [bulkSellOpen, setBulkSellOpen] = useState(false);
@@ -35,16 +35,13 @@ export default function AssetLedger() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 
-  /* ── Dialog target states ── */
   const [sellingAsset, setSellingAsset] = useState<Asset | null>(null);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
 
-  /* ── Selection & tab state ── */
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [selectedTab, setSelectedTab] = useState("All");
 
-  /* ── Sort state ── */
   type SortKey = "name" | "purchase_price" | "market_value" | "date_acquired";
   type SortDir = "asc" | "desc";
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -67,10 +64,9 @@ export default function AssetLedger() {
       : <ArrowDown className="h-3.5 w-3.5 ml-1" />;
   }
 
-  // ─── Data fetching ────────────────────────────────────────────────
   async function fetchCategories() {
     try {
-      const res = await fetch(`${API_BASE}/categories/`);
+      const res = await authFetch("/categories/");
       const data = await res.json();
       setCategories(
         (Array.isArray(data) ? data : []).map((c: any) => ({
@@ -86,7 +82,7 @@ export default function AssetLedger() {
 
   async function fetchAssets() {
     try {
-      const res = await fetch(`${API_BASE}/assets/`);
+      const res = await authFetch("/assets/");
       const data = await res.json();
       setAssets(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -99,13 +95,12 @@ export default function AssetLedger() {
   useEffect(() => {
     fetchCategories();
     fetchAssets();
-  }, []);
+  }, [authFetch]);
 
   // ─── Category handlers ────────────────────────────────────────────
   async function handleCreateCategory(name: string, colorIndex: number) {
-    const res = await fetch(`${API_BASE}/categories/`, {
+    const res = await authFetch("/categories/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, color_index: colorIndex }),
     });
     if (!res.ok) throw new Error("Failed to create category");
@@ -114,7 +109,7 @@ export default function AssetLedger() {
 
   async function handleDeleteCategory(catId: number) {
     const cat = categories.find((c) => c.id === catId);
-    const res = await fetch(`${API_BASE}/categories/${catId}`, { method: "DELETE" });
+    const res = await authFetch(`/categories/${catId}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete category");
     await fetchCategories();
     if (cat && selectedTab === cat.name) setSelectedTab("All");
@@ -122,9 +117,8 @@ export default function AssetLedger() {
 
   async function handleSaveCategory(id: number, name: string, colorIndex: number) {
     const oldCat = categories.find((c) => c.id === id);
-    const res = await fetch(`${API_BASE}/categories/${id}`, {
+    const res = await authFetch(`/categories/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, color_index: colorIndex }),
     });
     if (!res.ok) throw new Error("Failed to update category");
@@ -137,9 +131,8 @@ export default function AssetLedger() {
 
   function handleReorderCategories(reordered: CategoryItem[]) {
     setCategories(reordered);
-    fetch(`${API_BASE}/categories/reorder`, {
+    authFetch("/categories/reorder", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ category_ids: reordered.map((c) => c.id) }),
     }).catch((err) => console.error("Error reordering categories:", err));
   }
@@ -148,9 +141,8 @@ export default function AssetLedger() {
   async function handleAddAsset(data: {
     name: string; category: string; purchase_price: number; market_value: number | null; date_acquired: string;
   }) {
-    const res = await fetch(`${API_BASE}/assets/`, {
+    const res = await authFetch("/assets/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error("Failed to add asset");
@@ -161,9 +153,8 @@ export default function AssetLedger() {
   async function handleEditAsset(id: number, data: {
     name: string; category: string; purchase_price: number; market_value: number | null; date_acquired: string;
   }) {
-    const res = await fetch(`${API_BASE}/assets/${id}`, {
+    const res = await authFetch(`/assets/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error("Failed to update asset");
@@ -173,7 +164,7 @@ export default function AssetLedger() {
   }
 
   async function handleDeleteAsset(id: number) {
-    const res = await fetch(`${API_BASE}/assets/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/assets/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete asset");
     setDeleteOpen(false);
     setDeletingAsset(null);
@@ -188,8 +179,8 @@ export default function AssetLedger() {
   async function handleSellAsset(
     assetId: number, salePrice: number, dateSold: string, wallet: string,
   ) {
-    const res = await fetch(
-      `${API_BASE}/assets/${assetId}/sell?sale_price=${salePrice}&destination_wallet=${wallet}&date_sold=${dateSold}`,
+    const res = await authFetch(
+      `/assets/${assetId}/sell?sale_price=${salePrice}&destination_wallet=${wallet}&date_sold=${dateSold}`,
       { method: "PUT" },
     );
     if (!res.ok) throw new Error("Failed to sell asset");
@@ -202,8 +193,8 @@ export default function AssetLedger() {
     sales: { id: number; salePrice: number; dateSold: string }[], wallet: string,
   ) {
     const promises = sales.map((sale) =>
-      fetch(
-        `${API_BASE}/assets/${sale.id}/sell?sale_price=${sale.salePrice}&destination_wallet=${wallet}&date_sold=${sale.dateSold}`,
+      authFetch(
+        `/assets/${sale.id}/sell?sale_price=${sale.salePrice}&destination_wallet=${wallet}&date_sold=${sale.dateSold}`,
         { method: "PUT" },
       )
     );
@@ -350,6 +341,7 @@ export default function AssetLedger() {
             </p>
           </div>
         ) : (
+          <div className="max-h-[520px] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -393,7 +385,7 @@ export default function AssetLedger() {
                     className="group"
                     data-state={selectedIds.has(asset.id) ? "selected" : undefined}
                   >
-                    <TableCell className="pl-6">
+                    <TableCell className="pl-6 align-middle">
                       <Checkbox
                         checked={selectedIds.has(asset.id)}
                         onCheckedChange={() => toggleSelect(asset.id)}
@@ -455,6 +447,7 @@ export default function AssetLedger() {
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
 

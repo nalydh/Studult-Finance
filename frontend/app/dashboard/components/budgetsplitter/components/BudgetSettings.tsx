@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,6 +36,7 @@ interface BudgetSettingsProps {
 }
 
 export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", currentIncomeType = "Salary", onSplitUpdated }: BudgetSettingsProps) {
+  const authFetch = useAuthFetch();
   const [open, setOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [weekStartDay, setWeekStartDay] = useState(currentWeekStartsOn.toLowerCase());
@@ -96,19 +98,27 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    
+    e.stopPropagation();
+
     if (!isValid) {
       setError("Percentages must add up to 100% and all must be greater than 0");
       return;
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`, {
+      // Determine the strategy name to send
+      let strategyName = "Custom";
+      if (selectedPreset !== CUSTOM_SPLIT_ID) {
+        const selectedOption = SPLIT_OPTIONS.find(opt => opt.id === selectedPreset);
+        if (selectedOption) {
+          strategyName = selectedOption.label;
+        }
+      }
+
+      const response = await authFetch("/budget/preferences", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
+          strategy_name: strategyName,
           needs_pct: needs,
           wants_pct: wants,
           savings_pct: savings,
@@ -137,7 +147,7 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" type="button">
           <SlidersHorizontal className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -169,7 +179,7 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
           <div className="border-t" />
 
           {/* General Preferences Section */}
-          <div className="space-y-4 bg-gray-50 p-4 rounded-lg border">
+          <div className="space-y-4 bg-white p-4 rounded-lg border">
             <h3 className="font-semibold text-sm uppercase tracking-wide">
               General Preferences
             </h3>

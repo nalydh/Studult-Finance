@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 interface Snapshot {
   id: number;
@@ -16,19 +16,19 @@ interface Snapshot {
 }
 
 export function NetWorthCard() {
+  const authFetch = useAuthFetch();
   const [latest, setLatest] = useState<Snapshot | null>(null);
   const [previous, setPrevious] = useState<Snapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/snapshots/`)
+    authFetch("/snapshots/")
       .then((r) => r.json())
       .then((snapshots: Snapshot[]) => {
         if (!Array.isArray(snapshots) || snapshots.length === 0) {
           setLatest(null);
           return;
         }
-        // Snapshots ordered ascending — last is most recent
         setLatest(snapshots[snapshots.length - 1]);
         if (snapshots.length >= 2) {
           setPrevious(snapshots[snapshots.length - 2]);
@@ -36,7 +36,7 @@ export function NetWorthCard() {
       })
       .catch((err) => console.error("Error fetching snapshots:", err))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [authFetch]);
 
   if (isLoading) {
     return (
@@ -51,7 +51,7 @@ export function NetWorthCard() {
   if (!latest) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="text-lg">Net Worth</CardTitle>
         </CardHeader>
         <CardContent className="text-center text-muted-foreground text-sm pb-6">

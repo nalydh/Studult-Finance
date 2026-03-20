@@ -5,6 +5,7 @@ BudgetForm Component:
 */
 
 import React, { FormEvent, ChangeEvent, useState, useEffect } from "react";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,9 +37,23 @@ export interface BudgetItem {
   name: string;
   amount: number;
   category: "Needs" | "Wants" | "Savings";
+  frequency?: "weekly" | "monthly" | "annually";
+}
+
+function toWeeklyAmount(amount: number, frequency: BudgetItem["frequency"]) {
+  if (frequency === "monthly") return (amount * 12) / 52;
+  if (frequency === "annually") return amount / 52;
+  return amount;
+}
+
+function frequencyLabel(frequency: BudgetItem["frequency"]) {
+  if (frequency === "monthly") return "month";
+  if (frequency === "annually") return "year";
+  return "week";
 }
 
 function BudgetForm() {
+  const authFetch = useAuthFetch();
   const [income, setIncome] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [splitData, setSplitData] = useState<SplitData>({
@@ -61,7 +76,7 @@ function BudgetForm() {
   useEffect(() => {
     async function fetchSplit() {
       try {
-        const splitResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`);
+        const splitResult = await authFetch("/budget/preferences");
         const splitData = await splitResult.json();
 
         setSplitData({
@@ -72,12 +87,12 @@ function BudgetForm() {
         if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
         if (splitData.income_type) setIncomeType(splitData.income_type);
 
-        const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
+        const itemsResult = await authFetch("/budget/items");
         const itemsData = await itemsResult.json();
-        setBudgetItems(itemsData);
+        setBudgetItems(Array.isArray(itemsData) ? itemsData : []);
 
         // Check if a split already exists this week
-        const weekResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/current-week-split`);
+        const weekResult = await authFetch("/budget/current-week-split");
         const weekData = await weekResult.json();
         if (weekData && weekData.id) {
           setIsLockedOut(true);
@@ -95,7 +110,7 @@ function BudgetForm() {
       }
     }
     fetchSplit();
-  }, []);
+  }, [authFetch]);
 
   // Calculate splits in real-time as user types
   useEffect(() => {
@@ -121,9 +136,9 @@ function BudgetForm() {
 
   async function refreshBudgetItems() {
     try {
-      const itemsResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/items`);
+      const itemsResult = await authFetch("/budget/items");
       const itemsData = await itemsResult.json();
-      setBudgetItems(itemsData);
+      setBudgetItems(Array.isArray(itemsData) ? itemsData : []);
     } catch (error) {
       console.error("Error refreshing budget items:", error);
     }
@@ -131,7 +146,7 @@ function BudgetForm() {
 
   async function refreshSplitPreferences() {
     try {
-      const splitResult = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`);
+      const splitResult = await authFetch("/budget/preferences");
       const splitData = await splitResult.json();
       setSplitData({
         needs: splitData.needs_pct,
@@ -158,11 +173,8 @@ function BudgetForm() {
     weekStart.setHours(0, 0, 0, 0);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/calculate`, {
+      const response = await authFetch("/budget/calculate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           amount: Number(income),
           source: "Salary",
@@ -273,7 +285,7 @@ function BudgetForm() {
               {walletTypes.map((wallet) => {
                 // Calculate unallocated amount
                 const totalItemized = wallet.items.reduce(
-                  (acc, item) => acc + item.amount,
+                  (acc, item) => acc + toWeeklyAmount(item.amount, item.frequency),
                   0
                 );
                 const unallocated = wallet.value - totalItemized;
@@ -313,12 +325,20 @@ function BudgetForm() {
                                 {wallet.items.map((item) => (
                                   <div
                                     key={item.id}
-                                    className="flex justify-between text-muted-foreground"
+                                    className="flex items-start justify-between gap-3 text-muted-foreground"
                                   >
-                                    <span>{item.name}</span>
-                                    <span className="font-code">
-                                      ${item.amount.toFixed(2)}
-                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="truncate">{item.name}</p>
+                                      <p className="text-[11px] text-muted-foreground/90">
+                                        ${item.amount.toFixed(2)} / {frequencyLabel(item.frequency)}
+                                      </p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="font-code text-foreground">
+                                        ${toWeeklyAmount(item.amount, item.frequency).toFixed(2)}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground">per week</p>
+                                    </div>
                                   </div>
                                 ))}
                                 <div className="flex justify-between pt-2 border-t font-semibold">
