@@ -6,9 +6,10 @@ import os
 import resend
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-APP_URL = os.getenv("APP_URL")
-#TODO: UPDATE FROM_EMAIL TO ACTUAL DOMAIN
-FROM_EMAIL = "StuFin <noreply@yourdomain.com>" 
+APP_URL = os.getenv("APP_URL", "https://stufin.starkandco.site")
+# Once starkandco.site is verified in Resend, this sender will work for all users.
+# Until then, onboarding@resend.dev sends only to your own verified Resend email.
+FROM_EMAIL = "StuFin <noreply@starkandco.site>"
 
 
 def _send(to: str, subject: str, html: str) -> None:
