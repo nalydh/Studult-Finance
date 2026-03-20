@@ -15,6 +15,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { API_BASE } from "@/lib/api";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -29,6 +30,7 @@ interface Snapshot {
 }
 
 export function NetWorthChart() {
+  const authFetch = useAuthFetch();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"3M" | "6M" | "1Y" | "ALL">("ALL");
@@ -44,7 +46,7 @@ export function NetWorthChart() {
   useEffect(() => {
     async function fetchSnapshots() {
       try {
-        const res = await fetch(`${API_BASE}/snapshots/`);
+        const res = await authFetch("/snapshots/");
         const data = await res.json();
         if (Array.isArray(data)) setSnapshots(data);
       } catch (err) {
@@ -53,9 +55,8 @@ export function NetWorthChart() {
         setIsLoading(false);
       }
     }
-
     fetchSnapshots();
-  }, []);
+  }, [authFetch]);
 
   if (isLoading) {
     return (

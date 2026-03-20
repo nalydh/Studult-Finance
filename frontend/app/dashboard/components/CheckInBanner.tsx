@@ -4,16 +4,17 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CalendarClock, ArrowRight } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 export function CheckInBanner() {
+  const authFetch = useAuthFetch();
   const [shouldShow, setShouldShow] = useState(false);
   const [daysSince, setDaysSince] = useState<number | null>(null);
 
   useEffect(() => {
     async function checkSnapshots() {
       try {
-        const res = await fetch(`${API_BASE}/snapshots/`);
+        const res = await authFetch("/snapshots/");
         const snapshots = await res.json();
 
         if (!Array.isArray(snapshots) || snapshots.length === 0) {
@@ -24,20 +25,16 @@ export function CheckInBanner() {
         const latest = snapshots[snapshots.length - 1];
         const latestDate = new Date(latest.snapshot_date);
         const now = new Date();
-        const diffMs = now.getTime() - latestDate.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffDays = Math.floor((now.getTime() - latestDate.getTime()) / (1000 * 60 * 60 * 24));
 
         setDaysSince(diffDays);
-        if (diffDays >= 30) {
-          setShouldShow(true);
-        }
+        if (diffDays >= 30) setShouldShow(true);
       } catch (err) {
         console.error("Error checking snapshots:", err);
       }
     }
-
     checkSnapshots();
-  }, []);
+  }, [authFetch]);
 
   if (!shouldShow) return null;
 

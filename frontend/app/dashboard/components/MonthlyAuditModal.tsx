@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Banknote, TrendingUp, CreditCard, Package } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 interface Account {
   id: number;
@@ -33,57 +33,45 @@ interface MonthlyAuditModalProps {
 }
 
 export function MonthlyAuditModal({ open, onOpenChange, onSuccess }: MonthlyAuditModalProps) {
+  const authFetch = useAuthFetch();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Draft states keyed by id → string value for controlled inputs
   const [accountBalances, setAccountBalances] = useState<Record<number, string>>({});
   const [assetPrices, setAssetPrices] = useState<Record<number, string>>({});
 
-  // Original values for diffing on submit
   const [origAccountBalances, setOrigAccountBalances] = useState<Record<number, number>>({});
   const [origAssetPrices, setOrigAssetPrices] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (!open) return;
-
     async function fetchData() {
       setIsLoading(true);
       try {
         const [accsRes, astsRes] = await Promise.all([
-          fetch(`${API_BASE}/accounts/`),
-          fetch(`${API_BASE}/assets/`),
+          authFetch("/accounts/"),
+          authFetch("/assets/"),
         ]);
         const accs = await accsRes.json();
         const asts = await astsRes.json();
 
         const accountList: Account[] = Array.isArray(accs) ? accs : [];
-        const activeAssets: Asset[] = (Array.isArray(asts) ? asts : []).filter(
-          (a: Asset) => !a.is_sold
-        );
+        const activeAssets: Asset[] = (Array.isArray(asts) ? asts : []).filter((a: Asset) => !a.is_sold);
 
         setAccounts(accountList);
         setAssets(activeAssets);
 
-        // Initialize drafts
         const ab: Record<number, string> = {};
         const origAb: Record<number, number> = {};
-        accountList.forEach((a) => {
-          ab[a.id] = a.balance.toString();
-          origAb[a.id] = a.balance;
-        });
+        accountList.forEach((a) => { ab[a.id] = a.balance.toString(); origAb[a.id] = a.balance; });
         setAccountBalances(ab);
         setOrigAccountBalances(origAb);
 
         const ap: Record<number, string> = {};
         const origAp: Record<number, number> = {};
-        activeAssets.forEach((a) => {
-          const val = a.market_value ?? a.purchase_price;
-          ap[a.id] = val.toString();
-          origAp[a.id] = val;
-        });
+        activeAssets.forEach((a) => { const val = a.market_value ?? a.purchase_price; ap[a.id] = val.toString(); origAp[a.id] = val; });
         setAssetPrices(ap);
         setOrigAssetPrices(origAp);
       } catch (err) {
@@ -92,9 +80,8 @@ export function MonthlyAuditModal({ open, onOpenChange, onSuccess }: MonthlyAudi
         setIsLoading(false);
       }
     }
-
     fetchData();
-  }, [open]);
+  }, [open, authFetch]);
 
   function handleOpenChange(isOpen: boolean) {
     onOpenChange(isOpen);
@@ -105,39 +92,27 @@ export function MonthlyAuditModal({ open, onOpenChange, onSuccess }: MonthlyAudi
     setIsSubmitting(true);
 
     try {
-      // 1. Build update promises for changed accounts
       const accountUpdates = Object.entries(accountBalances)
-        .filter(([id, val]) => {
-          const newVal = parseFloat(val) || 0;
-          return newVal !== origAccountBalances[Number(id)];
-        })
+        .filter(([id, val]) => parseFloat(val) || 0 !== origAccountBalances[Number(id)])
         .map(([id, val]) =>
-          fetch(`${API_BASE}/accounts/${id}`, {
+          authFetch(`/accounts/${id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ balance: parseFloat(val) || 0 }),
           })
         );
 
-      // 2. Build update promises for changed assets
       const assetUpdates = Object.entries(assetPrices)
-        .filter(([id, val]) => {
-          const newVal = parseFloat(val) || 0;
-          return newVal !== origAssetPrices[Number(id)];
-        })
+        .filter(([id, val]) => parseFloat(val) || 0 !== origAssetPrices[Number(id)])
         .map(([id, val]) =>
-          fetch(`${API_BASE}/assets/${id}`, {
+          authFetch(`/assets/${id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ market_value: parseFloat(val) || 0 }),
           })
         );
 
-      // 3. Update all ledgers first
       await Promise.all([...accountUpdates, ...assetUpdates]);
 
-      // 4. Generate the frozen snapshot
-      const snapshotRes = await fetch(`${API_BASE}/snapshots/`, { method: "POST" });
+      const snapshotRes = await authFetch("/snapshots/", { method: "POST" });
       if (!snapshotRes.ok) throw new Error("Failed to generate snapshot");
 
       onOpenChange(false);
