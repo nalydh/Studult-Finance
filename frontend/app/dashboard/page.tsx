@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 import BudgetForm from "./components/budgetsplitter/components/BudgetForm";
 import AssetLedger from "./components/assetledger/AssetLedger";
 import AccountLedger from "./components/accountledger/AccountLedger";
@@ -54,6 +56,22 @@ function FadeCard({
 function DashboardPage() {
   const { data: session, status } = useSession();
   const userName = session?.user?.name?.split(" ")[0] ?? null;
+
+  const router = useRouter();
+  const authFetch = useAuthFetch();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      authFetch("/budget/preferences")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error === "No preferences found") {
+            router.push("/welcome");
+          }
+        })
+        .catch(console.error);
+    }
+  }, [status, authFetch, router]);
 
   if (status === "loading") {
     return (

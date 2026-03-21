@@ -11,6 +11,7 @@ import SplitSelector from "./components/SplitSelector";
 import { SPLIT_OPTIONS } from "../../components/StrategyPresets";
 import { CUSTOM_SPLIT_ID } from "../../components/StrategyPresets";
 import { useRouter } from "next/navigation";
+import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 export interface BudgetForm {
   needsPct: string;
@@ -27,6 +28,7 @@ interface BudgetPayload {
 
 function BudgetPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const [form, setForm] = useState<BudgetForm>({
     needsPct: "",
     wantsPct: "",
@@ -88,11 +90,8 @@ function BudgetPage() {
     const payload = structurePayload(selected);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/budget/preferences`, {
+      const response = await authFetch("/budget/preferences", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(payload),
       });
 

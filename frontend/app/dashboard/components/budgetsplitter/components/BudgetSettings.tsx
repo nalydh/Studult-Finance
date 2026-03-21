@@ -45,18 +45,18 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
   
   // Form state for SplitSelector component
   const [form, setForm] = useState({
-    needsPct: currentSplit.needs.toString(),
-    wantsPct: currentSplit.wants.toString(),
-    savingsPct: currentSplit.savings.toString(),
+    needsPct: (currentSplit?.needs ?? 0).toString(),
+    wantsPct: (currentSplit?.wants ?? 0).toString(),
+    savingsPct: (currentSplit?.savings ?? 0).toString(),
   });
 
   // Initialize form when dialog opens
   useEffect(() => {
     if (open) {
       setForm({
-        needsPct: currentSplit.needs.toString(),
-        wantsPct: currentSplit.wants.toString(),
-        savingsPct: currentSplit.savings.toString(),
+        needsPct: (currentSplit?.needs ?? 0).toString(),
+        wantsPct: (currentSplit?.wants ?? 0).toString(),
+        savingsPct: (currentSplit?.savings ?? 0).toString(),
       });
       setWeekStartDay(currentWeekStartsOn.toLowerCase());
       setIncomeType(currentIncomeType.toLowerCase());

@@ -80,9 +80,9 @@ function BudgetForm() {
         const splitData = await splitResult.json();
 
         setSplitData({
-          needs: splitData.needs_pct,
-          wants: splitData.wants_pct,
-          savings: splitData.savings_pct,
+          needs: splitData?.needs_pct ?? 0,
+          wants: splitData?.wants_pct ?? 0,
+          savings: splitData?.savings_pct ?? 0,
         });
         if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
         if (splitData.income_type) setIncomeType(splitData.income_type);
@@ -96,7 +96,7 @@ function BudgetForm() {
         const weekData = await weekResult.json();
         if (weekData && weekData.id) {
           setIsLockedOut(true);
-          setIncome(weekData.amount.toString());
+          setIncome((weekData?.amount ?? 0).toString());
           setSplitAmounts({
             needs: weekData.needs_allocated,
             wants: weekData.wants_allocated,
@@ -149,9 +149,9 @@ function BudgetForm() {
       const splitResult = await authFetch("/budget/preferences");
       const splitData = await splitResult.json();
       setSplitData({
-        needs: splitData.needs_pct,
-        wants: splitData.wants_pct,
-        savings: splitData.savings_pct,
+        needs: splitData?.needs_pct ?? 0,
+        wants: splitData?.wants_pct ?? 0,
+        savings: splitData?.savings_pct ?? 0,
       });
       if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
       if (splitData.income_type) setIncomeType(splitData.income_type);
