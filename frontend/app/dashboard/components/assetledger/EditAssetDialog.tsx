@@ -33,6 +33,7 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
   const [editPrice, setEditPrice] = useState("");
   const [editMarketValue, setEditMarketValue] = useState("");
   const [editDateAcquired, setEditDateAcquired] = useState<Date>(new Date());
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open && asset) {
@@ -46,7 +47,8 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!asset || !editName.trim() || !editCategory || !editPrice || !editDateAcquired) return;
+    if (!asset || !editName.trim() || !editCategory || !editPrice || !editDateAcquired || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await onSubmit(asset.id, {
         name: editName,
@@ -57,6 +59,8 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
       });
     } catch (error) {
       console.error("Error updating asset:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -74,6 +78,7 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
               placeholder="e.g. MacBook Pro"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
+              maxLength={50}
               required
             />
           </div>
@@ -134,6 +139,7 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
               type="number"
               step="0.01"
               min="0"
+              max="1000000000"
               prefix="$"
               placeholder="0.00"
               value={editPrice}
@@ -171,6 +177,7 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
                   type="number"
                   step="0.01"
                   min="0"
+                  max="1000000000"
                   prefix="$"
                   placeholder="0.00"
                   value={editMarketValue}
@@ -192,11 +199,13 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
           })()}
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" disabled={isSubmitting}>
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={!editName.trim() || !editCategory || !editPrice}>Save Changes</Button>
+            <Button type="submit" disabled={!editName.trim() || !editCategory || !editPrice || isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

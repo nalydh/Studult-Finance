@@ -79,6 +79,7 @@ export function SortableCategoryRow({
             if (e.key === "Enter") { e.preventDefault(); saveEditCategory(); }
             if (e.key === "Escape") cancelEditCategory();
           }}
+          maxLength={30}
           placeholder="Category name"
           autoFocus
         />

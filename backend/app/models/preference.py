@@ -9,4 +9,6 @@ class Preference(SQLModel, table=True):
   savings_pct: float
   week_starts_on: str = Field(default="Monday")
   income_type: str = Field(default="Salary")
+  salary_amount: float | None = None
+  salary_frequency: str | None = None
   

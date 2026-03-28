@@ -40,6 +40,7 @@ export function AddAssetDialog({
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState("");
   const [newCategoryColorIndex, setNewCategoryColorIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function resetForm() {
     setNewName("");
@@ -50,6 +51,7 @@ export function AddAssetDialog({
     setIsCreatingCategory(false);
     setNewCategoryInput("");
     setNewCategoryColorIndex(0);
+    setIsSubmitting(false);
   }
 
   function handleOpenChange(isOpen: boolean) {
@@ -98,7 +100,8 @@ export function AddAssetDialog({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!newName.trim() || !newCategory || !newPrice || !newDateAcquired) return;
+    if (!newName.trim() || !newCategory || !newPrice || !newDateAcquired || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await onSubmit({
         name: newName,
@@ -110,6 +113,8 @@ export function AddAssetDialog({
       resetForm();
     } catch (error) {
       console.error("Error adding asset:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -133,6 +138,7 @@ export function AddAssetDialog({
               placeholder="e.g. MacBook Pro"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
+              maxLength={50}
               required
             />
           </div>
@@ -164,6 +170,7 @@ export function AddAssetDialog({
                     placeholder="New category name"
                     value={newCategoryInput}
                     onChange={(e) => setNewCategoryInput(e.target.value)}
+                    maxLength={30}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -321,6 +328,7 @@ export function AddAssetDialog({
               type="number"
               step="0.01"
               min="0"
+              max="1000000000"
               prefix="$"
               placeholder="0.00"
               value={newPrice}
@@ -338,6 +346,7 @@ export function AddAssetDialog({
               type="number"
               step="0.01"
               min="0"
+              max="1000000000"
               prefix="$"
               placeholder="0.00"
               value={newMarketValue}
@@ -346,11 +355,13 @@ export function AddAssetDialog({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" disabled={isSubmitting}>
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={!newName.trim() || !newCategory || !newPrice}>Add Asset</Button>
+            <Button type="submit" disabled={!newName.trim() || !newCategory || !newPrice || isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Asset"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

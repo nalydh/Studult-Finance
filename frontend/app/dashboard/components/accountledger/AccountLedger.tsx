@@ -58,6 +58,7 @@ export default function AccountLedger() {
   const authFetch = useAuthFetch();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -95,7 +96,8 @@ export default function AccountLedger() {
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
-    if (!newName.trim() || !newCategory || !newBalance) return;
+    if (!newName.trim() || !newCategory || !newBalance || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const res = await authFetch("/accounts/", {
         method: "POST",
@@ -112,6 +114,8 @@ export default function AccountLedger() {
       fetchAccounts();
     } catch (err) {
       console.error("Error adding account:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -127,7 +131,8 @@ export default function AccountLedger() {
 
   async function handleEdit(e: FormEvent) {
     e.preventDefault();
-    if (!editingAccount || !editName.trim() || !editCategory || !editBalance) return;
+    if (!editingAccount || !editName.trim() || !editCategory || !editBalance || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const res = await authFetch(`/accounts/${editingAccount.id}`, {
         method: "PUT",
@@ -144,12 +149,15 @@ export default function AccountLedger() {
       fetchAccounts();
     } catch (err) {
       console.error("Error editing account:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   // ─── Delete ───────────────────────────────────────────────────────
   async function handleDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const res = await authFetch(`/accounts/${deleteTarget.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete account");
@@ -157,6 +165,8 @@ export default function AccountLedger() {
       fetchAccounts();
     } catch (err) {
       console.error("Error deleting account:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -302,7 +312,7 @@ export default function AccountLedger() {
             <div className="space-y-2">
               <Label htmlFor="acc-name">Name</Label>
               <Input id="acc-name" placeholder="e.g. CommBank Everyday" value={newName}
-                onChange={(e) => setNewName(e.target.value)} required />
+                onChange={(e) => setNewName(e.target.value)} maxLength={50} required />
             </div>
             <div className="space-y-2">
               <Label>Category</Label>
@@ -319,7 +329,7 @@ export default function AccountLedger() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="acc-balance">Current Balance</Label>
-              <Input id="acc-balance" type="number" step="0.01" min="0" prefix="$"
+              <Input id="acc-balance" type="number" step="0.01" min="0" max="1000000000" prefix="$"
                 placeholder="0.00" value={newBalance} onChange={(e) => setNewBalance(e.target.value)} required />
             </div>
             {newCategory === "Investment" && (
@@ -327,14 +337,16 @@ export default function AccountLedger() {
                 <Label htmlFor="acc-contrib" className="flex items-center gap-1.5 text-blue-700">
                   <PlusCircle className="h-3.5 w-3.5" /> Total Contributions
                 </Label>
-                <Input id="acc-contrib" type="number" step="0.01" min="0" prefix="$"
+                <Input id="acc-contrib" type="number" step="0.01" min="0" max="1000000000" prefix="$"
                   placeholder="0.00" value={newContributions} onChange={(e) => setNewContributions(e.target.value)} />
                 <p className="text-[11px] text-blue-600">How much have you personally deposited into this account in total?</p>
               </div>
             )}
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit" disabled={!newName.trim() || !newCategory || !newBalance}>Add Account</Button>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+              <Button type="submit" disabled={!newName.trim() || !newCategory || !newBalance || isSubmitting}>
+                {isSubmitting ? "Adding..." : "Add Account"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -350,7 +362,7 @@ export default function AccountLedger() {
             <div className="space-y-2">
               <Label htmlFor="edit-acc-name">Name</Label>
               <Input id="edit-acc-name" placeholder="e.g. CommBank Everyday" value={editName}
-                onChange={(e) => setEditName(e.target.value)} required />
+                onChange={(e) => setEditName(e.target.value)} maxLength={50} required />
             </div>
             <div className="space-y-2">
               <Label>Category</Label>
@@ -367,7 +379,7 @@ export default function AccountLedger() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-acc-balance">Current Balance</Label>
-              <Input id="edit-acc-balance" type="number" step="0.01" min="0" prefix="$"
+              <Input id="edit-acc-balance" type="number" step="0.01" min="0" max="1000000000" prefix="$"
                 placeholder="0.00" value={editBalance} onChange={(e) => setEditBalance(e.target.value)} required />
             </div>
             {editCategory === "Investment" && (
@@ -375,14 +387,16 @@ export default function AccountLedger() {
                 <Label htmlFor="edit-contrib" className="flex items-center gap-1.5 text-blue-700">
                   <PlusCircle className="h-3.5 w-3.5" /> Total Contributions
                 </Label>
-                <Input id="edit-contrib" type="number" step="0.01" min="0" prefix="$"
+                <Input id="edit-contrib" type="number" step="0.01" min="0" max="1000000000" prefix="$"
                   placeholder="0.00" value={editContributions} onChange={(e) => setEditContributions(e.target.value)} />
                 <p className="text-[11px] text-blue-600">Cumulative amount you&apos;ve personally deposited into this account.</p>
               </div>
             )}
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit" disabled={!editName.trim() || !editCategory || !editBalance}>Save Changes</Button>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+              <Button type="submit" disabled={!editName.trim() || !editCategory || !editBalance || isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -410,8 +424,10 @@ export default function AccountLedger() {
             </div>
           )}
           <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+            <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+              {isSubmitting ? "Deleting..." : "Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -191,6 +191,7 @@ export function BreakdownSheet({
                           value={editItemName}
                           onChange={(e) => setEditItemName(e.target.value)}
                           className="focus-visible:ring-primary-light"
+                          maxLength={50}
                         />
                       </div>
 
@@ -208,6 +209,7 @@ export function BreakdownSheet({
                           onChange={(e) => setEditItemAmount(e.target.value)}
                           pattern="[0-9]*\.?[0-9]*"
                           className="focus-visible:ring-primary-light"
+                          maxLength={15}
                         />
                       </div>
 
@@ -327,6 +329,7 @@ export function BreakdownSheet({
                       value={newItemName}
                       onChange={(e) => setNewItemName(e.target.value)}
                       className="focus-visible:ring-primary-light"
+                      maxLength={50}
                     />
                   </div>
 
@@ -344,6 +347,7 @@ export function BreakdownSheet({
                       onChange={(e) => setNewItemAmount(e.target.value)}
                       pattern="[0-9]*\.?[0-9]*"
                       className="focus-visible:ring-primary-light"
+                      maxLength={15}
                     />
                   </div>
 
