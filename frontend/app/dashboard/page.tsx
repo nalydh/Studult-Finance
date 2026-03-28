@@ -88,7 +88,7 @@ function DashboardPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">
-            {userName ? `Welcome back, ${userName}` : "Dashboard"}
+            {userName ? `Welcome back, ${userName[0].toUpperCase() + userName.slice(1)}!` : "Dashboard"}
           </h1>
           {userName && (
             <p className="text-sm text-muted-foreground mt-0.5">Here’s your financial overview.</p>
