@@ -71,7 +71,7 @@ export default function AboutPage() {
               </h2>
               <p className="text-zinc-600 leading-relaxed text-sm sm:text-base">
                 Most personal finance apps try to automate everything. StuFin does the opposite.
-                The act of <strong className="text-zinc-800">manually entering your numbers</strong> is
+                The act of <strong className="text-zinc-800">manually entering your numbers </strong> is
                 the point — it creates awareness, accountability, and intention. You can&apos;t
                 fool yourself when you&apos;re the one typing the balance.
               </p>

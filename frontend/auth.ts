@@ -45,6 +45,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 
+  session: {
+    maxAge: 2 * 60 * 60, // 2 hours in seconds
+  },
+
   callbacks: {
     // Called after a successful Google sign-in to register/find the user in FastAPI
     async signIn({ user, account, profile }) {
