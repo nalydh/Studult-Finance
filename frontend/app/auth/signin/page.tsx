@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Eye, EyeOff, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
@@ -29,6 +29,8 @@ function GoogleIcon() {
   );
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,21 +38,100 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => setCountdown(c => c - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("registered") === "1") {
+        setSuccess("Account created! Please check your email to verify your account before signing in.");
+      } else if (params.get("verified") === "1") {
+        setSuccess("Email verified! You can now sign in to your account.");
+      }
+    }
+  }, []);
 
   async function handleEmailSignIn(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
+    setUnverifiedEmail(null);
     setIsLoading(true);
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    setIsLoading(false);
-    if (result?.error) {
-      setError("Invalid email or password. Please try again.");
-    } else {
-      window.location.href = "/dashboard";
+
+    try {
+      // Pre-flight check to gracefully handle unverified users
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.detail === "Please verify your email address to log in.") {
+           setUnverifiedEmail(email);
+           setError(data.detail);
+           setIsLoading(false);
+           return;
+        }
+        setError("Invalid email or password. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Credentials are good and user is verified. Proceed with NextAuth.
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        window.location.href = "/dashboard";
+      }
+    } catch {
+       setError("Something went wrong. Please check your connection and try again.");
+    } finally {
+       setIsLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (countdown > 0 || !unverifiedEmail) return;
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.detail || "Something went wrong. Please try again.");
+        return;
+      }
+
+      setSuccess("A new verification link has been sent to your email.");
+      setCountdown(30);
+    } catch {
+      setError("Something went wrong. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -149,10 +230,25 @@ export default function SignInPage() {
             </p>
           </div>
 
-          {/* Error message */}
+          {/* Messages */}
+          {success && (
+            <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              {success}
+            </div>
+          )}
           {error && (
             <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
+              <p>{error}</p>
+              {unverifiedEmail && (
+                 <button
+                   type="button"
+                   onClick={handleResend}
+                   disabled={countdown > 0 || isLoading}
+                   className="mt-2 text-xs font-semibold text-red-700 hover:text-red-900 disabled:opacity-50 transition-colors underline"
+                 >
+                   {countdown > 0 ? `Resend email in ${countdown}s` : "Resend verification email"}
+                 </button>
+              )}
             </div>
           )}
 

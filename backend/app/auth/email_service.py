@@ -61,7 +61,7 @@ def send_password_reset_email(to: str, token: str) -> None:
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px">
       <h2 style="color:#18181b;margin-bottom:8px">Reset your StuFin password</h2>
       <p style="color:#71717a;margin-bottom:24px">
-        Click the button below to set a new password. This link expires in <strong>1 hour</strong>.
+        Click the button below to set a new password. This link expires in <strong>15 minutes</strong>.
       </p>
       <a href="{link}"
          style="display:inline-block;background:#18181b;color:#fff;padding:12px 28px;border-radius:8px;

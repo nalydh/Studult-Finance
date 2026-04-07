@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle2, Mail } from "lucide-react";
 
@@ -11,6 +11,14 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +39,33 @@ export default function ForgotPasswordPage() {
       }
 
       setSubmitted(true);
+      setCountdown(30);
+    } catch {
+      setError("Something went wrong. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (countdown > 0) return;
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.detail || "Something went wrong. Please try again.");
+        return;
+      }
+
+      setCountdown(30);
     } catch {
       setError("Something went wrong. Please check your connection and try again.");
     } finally {
@@ -89,25 +124,25 @@ export default function ForgotPasswordPage() {
                 Check your inbox
               </h2>
               <p className="text-sm text-zinc-500 leading-relaxed">
-                If <strong>{email}</strong> is registered, you&apos;ll receive a password reset link
-                within a few minutes. The link expires in <strong>1 hour</strong>.
+                If <strong>{email} </strong> is registered, you&apos;ll receive a password reset link
+                within a few minutes. The link expires in <strong>15 minutes</strong>.
               </p>
               <p className="text-xs text-zinc-400">
                 Didn&apos;t get it? Check your spam folder or{" "}
                 <button
-                  onClick={() => { setSubmitted(false); setEmail(""); }}
-                  className="text-emerald-600 hover:text-emerald-700 font-medium"
+                  onClick={handleResend}
+                  disabled={countdown > 0 || isLoading}
+                  className="text-emerald-600 hover:text-emerald-700 font-medium disabled:text-zinc-400 disabled:cursor-not-allowed transition-colors"
                 >
-                  try a different email
+                  {countdown > 0 ? `resend again in ${countdown}s` : "resend link"}
                 </button>
-                .
               </p>
-              <Link
-                href="/auth/signin"
-                className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-600 transition-colors"
+              <button
+                 onClick={() => { setSubmitted(false); setEmail(""); }}
+                 className="text-xs text-zinc-400 hover:text-zinc-600 font-medium mt-1"
               >
-                <ArrowLeft className="h-4 w-4" /> Back to sign in
-              </Link>
+                Or try a different email
+              </button>
             </div>
           ) : (
             /* ── Form state ── */

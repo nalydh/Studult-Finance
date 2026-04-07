@@ -67,12 +67,12 @@ function VerifyEmailContent() {
               </div>
             </div>
             <h1 className="text-2xl font-bold text-zinc-900">Email verified!</h1>
-            <p className="text-sm text-zinc-500">{message}</p>
+            <p className="text-sm text-zinc-500">Your email has been confirmed. You can now sign in to your account.</p>
             <Link
-              href="/dashboard"
+              href="/auth/signin?verified=1"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2.5 text-sm font-semibold transition-all"
             >
-              Go to Dashboard
+              Sign in
             </Link>
           </>
         )}
@@ -86,19 +86,19 @@ function VerifyEmailContent() {
             </div>
             <h1 className="text-2xl font-bold text-zinc-900">Verification failed</h1>
             <p className="text-sm text-zinc-500">{message}</p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col items-center gap-3">
               <Link
-                href="/dashboard"
+                href="/auth/signin"
                 className="inline-flex items-center justify-center rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2.5 text-sm font-semibold transition-all"
               >
-                Go to Dashboard
+                Back to sign in
               </Link>
               <p className="text-xs text-zinc-400">
-                You can resend the verification from your account settings, or{" "}
-                <Link href="/auth/signin" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                  sign in
+                Need a new link? Enter your email on the{" "}
+                <Link href="/auth/signin?registered=1" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                  sign in page
                 </Link>
-                .
+                {" "}to request another.
               </p>
             </div>
           </>

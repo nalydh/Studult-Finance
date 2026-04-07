@@ -81,7 +81,7 @@ def _create_reset_token(user_id: int, session: Session) -> str:
     db_token = PasswordResetToken(
         user_id=user_id,
         token=token,
-        expires_at=datetime.utcnow() + timedelta(hours=1),
+        expires_at=datetime.utcnow() + timedelta(minutes=15),
     )
     session.add(db_token)
     session.commit()
@@ -143,6 +143,8 @@ def login(request: Request, req: LoginRequest, session: Session = Depends(get_se
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user.email_verified:
+        raise HTTPException(status_code=403, detail="Please verify your email address to log in.")
     return user_response(user)
 
 
@@ -204,19 +206,29 @@ def verify_email(token: str, session: Session = Depends(get_session)):
 @limiter.limit("3/minute")
 def resend_verification(
     request: Request,
-    user_id: int = Depends(get_current_user_id),
+    req: ForgotPasswordRequest,
     session: Session = Depends(get_session),
 ):
-    """Resend the email verification link (requires being logged in)."""
-    user = session.get(User, user_id)
+    """Resend the email verification link."""
+    user = session.exec(select(User).where(User.email == req.email)).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return {"message": "If that account exists, a new verification link has been sent."}
     if user.email_verified:
         return {"message": "Email already verified"}
 
+    # Enforce a strict 30-second cooldown per user
+    last_token = session.exec(
+        select(EmailVerificationToken)
+        .where(EmailVerificationToken.user_id == user.id)
+        .order_by(EmailVerificationToken.created_at.desc())
+    ).first()
+
+    if last_token and (datetime.utcnow() - last_token.created_at).total_seconds() < 30:
+        raise HTTPException(status_code=429, detail="Please wait at least 30 seconds before requesting a new link.")
+
     token = _create_verification_token(user.id, session)
     send_verification_email(user.email, token)
-    return {"message": "Verification email resent"}
+    return {"message": "If that account exists, a new verification link has been sent."}
 
 
 @router.post("/forgot-password")
@@ -231,6 +243,16 @@ def forgot_password(
     """
     user = session.exec(select(User).where(User.email == req.email)).first()
     if user and user.hashed_password:  # Only email/password accounts can reset
+        # Enforce a strict 30-second cooldown per user
+        last_token = session.exec(
+            select(PasswordResetToken)
+            .where(PasswordResetToken.user_id == user.id)
+            .order_by(PasswordResetToken.created_at.desc())
+        ).first()
+
+        if last_token and (datetime.utcnow() - last_token.created_at).total_seconds() < 30:
+            raise HTTPException(status_code=429, detail="Please wait at least 30 seconds before requesting a new link.")
+
         token = _create_reset_token(user.id, session)
         send_password_reset_email(user.email, token)
     return {"message": "If that email is registered, a reset link has been sent"}
