@@ -167,4 +167,5 @@ def get_analytics_data(
         }
 
     except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred. Please try again later.")

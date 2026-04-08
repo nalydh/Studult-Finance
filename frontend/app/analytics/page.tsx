@@ -40,6 +40,26 @@ interface AnalyticsData {
   incomeLog:            { id: number; date: string; source: string; strategy: string; amount: number; needs: number; wants: number; savings: number }[];
 }
 
+/* ── Animated card wrapper ── */
+function FadeCard({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`animate-in fade-in zoom-in-[0.98] slide-in-from-bottom-6 duration-700 ease-out fill-mode-both ${className}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ── Reusable Info Tooltip ──
 function InfoTooltip({ title, lines }: { title: string; lines: { color: string; label: string; desc: string }[] }) {
   return (
@@ -162,17 +182,20 @@ export default function AnalyticsPage() {
       <div className="max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-7 flex flex-col gap-6">
 
         {/* ── Header ── */}
-        <div>
-          <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-2 duration-200">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-          </Link>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Analytics</h1>
-        </div>
+        <FadeCard delay={0}>
+          <div>
+            <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-2 duration-200">
+              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            </Link>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Analytics</h1>
+          </div>
+        </FadeCard>
 
         {/* ── 3-column chart row ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
           {/* ── Chart 1: Net Worth ── */}
+          <FadeCard delay={100} className="h-full">
           <Card className="h-[420px] flex flex-col shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-0 pt-5 px-5">
               <div className="flex items-start justify-between">
@@ -243,8 +266,10 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
+          </FadeCard>
 
           {/* ── Chart 2: Net Worth Breakdown ── */}
+          <FadeCard delay={200} className="h-full">
           <Card className="h-[420px] flex flex-col shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-0 pt-5 px-5">
               <div className="flex items-start justify-between">
@@ -290,8 +315,10 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
+          </FadeCard>
 
           {/* ── Chart 3: Weekly Allocation Trends ── */}
+          <FadeCard delay={300} className="h-full">
           <Card className="h-[420px] flex flex-col shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-0 pt-5 px-5">
               <div className="flex items-start justify-between">
@@ -334,10 +361,12 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
+          </FadeCard>
 
         </div>
 
         {/* ── Income Log — connected beneath Weekly Allocation ── */}
+        <FadeCard delay={400}>
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
@@ -428,10 +457,14 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+        </FadeCard>
 
         {/* ── Asset + Investment Portfolio (side by side) ── */}
-        <PortfolioPanel />
+        <FadeCard delay={500}>
+          <PortfolioPanel />
+        </FadeCard>
 
+        <FadeCard delay={600}>
         <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {/* Gradient shimmer strip at the top */}
           <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-violet-500 via-fuchsia-400 to-indigo-400" />
@@ -486,6 +519,7 @@ export default function AnalyticsPage() {
             </p>
           </div>
         </div>
+        </FadeCard>
 
       </div>
     </div>

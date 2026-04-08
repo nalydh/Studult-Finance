@@ -31,7 +31,8 @@ def create_account(
         session.refresh(account)
         return account
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.get("/")
@@ -47,7 +48,8 @@ def get_accounts(
         )
         return session.exec(statement).all()
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.put("/{id}")
@@ -79,7 +81,8 @@ def update_account(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.delete("/{id}")
@@ -101,4 +104,5 @@ def delete_account(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")

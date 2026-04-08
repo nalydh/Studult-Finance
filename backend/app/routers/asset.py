@@ -22,7 +22,8 @@ def insert_asset(
         session.refresh(data)
         return data
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.get("/")
@@ -38,7 +39,8 @@ def get_assets(
         )
         return session.exec(statement).all()
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.put("/{id}/sell")
@@ -88,7 +90,8 @@ def sell_asset(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.put("/{id}")
@@ -118,7 +121,8 @@ def update_asset(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.delete("/{id}")
@@ -140,4 +144,5 @@ def delete_asset(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")

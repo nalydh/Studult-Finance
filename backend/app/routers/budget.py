@@ -50,7 +50,8 @@ def insert_preference(
         session.refresh(data)
         return data
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.get("/preferences")
@@ -86,7 +87,8 @@ def get_preference(
         data["expected_weekly_income"] = expected_weekly
         return data
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.put("/preferences")
@@ -131,7 +133,8 @@ def update_preference(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 # ── Budget Items ──────────────────────────────────────────────────
@@ -149,7 +152,8 @@ def insert_budget_item(
         session.refresh(data)
         return data
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.get("/items")
@@ -161,7 +165,8 @@ def get_budget_items(
         statement = select(BudgetItem).where(BudgetItem.user_id == user_id)
         return session.exec(statement).all()
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 @router.put("/items/{item_id}")
@@ -209,7 +214,8 @@ def delete_budget_item(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")
 
 
 # ── Weekly Split + Calculate ──────────────────────────────────────
@@ -300,4 +306,5 @@ def calculate_and_insert_budget(
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        print(f"Internal Server Error: {error}")
+        raise HTTPException(status_code=400, detail="An unexpected error occurred. Please try again later.")

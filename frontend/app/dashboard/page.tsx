@@ -12,41 +12,20 @@ import { NetWorthCard } from "./components/NetWorthCard";
 import Link from "next/link";
 import { ArrowRight, Loader2 } from "lucide-react";
 
-/* ── Entrance animation hook ── */
-function useSlideIn() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("animate-in");
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.08 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return ref;
-}
-
 /* ── Animated card wrapper ── */
 function FadeCard({
   children,
   delay = 0,
+  className = "",
 }: {
   children: React.ReactNode;
   delay?: number;
+  className?: string;
 }) {
-  const ref = useSlideIn();
   return (
     <div
-      ref={ref}
-      className="opacity-0 translate-y-4 transition-none [&.animate-in]:opacity-100 [&.animate-in]:translate-y-0 [&.animate-in]:transition-all [&.animate-in]:duration-500 [&.animate-in]:ease-out"
-      style={{ transitionDelay: `${delay}ms` }}
+      className={`animate-in fade-in zoom-in-[0.98] slide-in-from-bottom-6 duration-700 ease-out fill-mode-both ${className}`}
+      style={{ animationDelay: `${delay}ms` }}
     >
       {children}
     </div>

@@ -25,6 +25,6 @@ def get_current_user(
 
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=401, detail="Invalid session")
 
     return user

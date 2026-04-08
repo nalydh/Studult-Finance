@@ -194,7 +194,7 @@ def verify_email(token: str, session: Session = Depends(get_session)):
 
     user = session.get(User, db_token.user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Invalid verification link")
 
     user.email_verified = True
     db_token.used = True
@@ -277,7 +277,7 @@ def reset_password(req: ResetPasswordRequest, session: Session = Depends(get_ses
 
     user = session.get(User, db_token.user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Invalid reset link")
 
     user.hashed_password = hash_password(req.new_password)
     db_token.used = True
@@ -293,7 +293,7 @@ def get_me(
     """Return the authenticated user's profile."""
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Invalid session")
     return {
         "id":             user.id,
         "email":          user.email,
