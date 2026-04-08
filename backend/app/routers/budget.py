@@ -22,6 +22,8 @@ class PreferenceUpdate(BaseModel):
     savings_pct: float | None = None
     week_starts_on: str | None = None
     income_type: str | None = None
+    salary_amount: float | None = None
+    salary_frequency: str | None = None
 
 
 router = APIRouter(prefix="/budget", tags=["budget"])
@@ -62,7 +64,27 @@ def get_preference(
         ).first()
         if not result:
             return {"error": "No preferences found"}
-        return result
+            
+        data = result.model_dump()
+        expected_weekly = None
+        
+        if data.get("income_type") and data["income_type"].lower() == "salary" and data.get("salary_amount"):
+            amount = float(data["salary_amount"])
+            freq = str(data.get("salary_frequency") or "monthly").lower()
+            
+            if freq == "yearly":
+                expected_weekly = amount / 52
+            elif freq == "monthly":
+                expected_weekly = (amount * 12) / 52
+            elif freq == "fortnightly":
+                expected_weekly = amount / 2
+            else:  # weekly
+                expected_weekly = amount
+                
+            expected_weekly = round(expected_weekly, 2)
+            
+        data["expected_weekly_income"] = expected_weekly
+        return data
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -92,6 +114,10 @@ def update_preference(
             pref.week_starts_on = data.week_starts_on
         if data.income_type is not None:
             pref.income_type = data.income_type
+        if data.salary_amount is not None:
+            pref.salary_amount = data.salary_amount
+        if data.salary_frequency is not None:
+            pref.salary_frequency = data.salary_frequency
 
         if any(x is not None for x in [data.needs_pct, data.wants_pct, data.savings_pct]):
             total = pref.needs_pct + pref.wants_pct + pref.savings_pct

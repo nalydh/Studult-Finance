@@ -4,6 +4,7 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -32,15 +33,26 @@ interface BudgetSettingsProps {
   };
   currentWeekStartsOn?: string;
   currentIncomeType?: string;
+  currentSalaryAmount?: number | null;
+  currentSalaryFrequency?: string | null;
   onSplitUpdated?: () => void;
 }
 
-export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", currentIncomeType = "Salary", onSplitUpdated }: BudgetSettingsProps) {
+export function BudgetSettings({ 
+  currentSplit, 
+  currentWeekStartsOn = "Monday", 
+  currentIncomeType = "Salary", 
+  currentSalaryAmount = null,
+  currentSalaryFrequency = "monthly",
+  onSplitUpdated 
+}: BudgetSettingsProps) {
   const authFetch = useAuthFetch();
   const [open, setOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [weekStartDay, setWeekStartDay] = useState(currentWeekStartsOn.toLowerCase());
   const [incomeType, setIncomeType] = useState(currentIncomeType.toLowerCase());
+  const [salaryAmount, setSalaryAmount] = useState<string>(currentSalaryAmount ? currentSalaryAmount.toString() : "");
+  const [salaryFrequency, setSalaryFrequency] = useState<string>(currentSalaryFrequency || "monthly");
   const [error, setError] = useState("");
   
   // Form state for SplitSelector component
@@ -60,6 +72,8 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
       });
       setWeekStartDay(currentWeekStartsOn.toLowerCase());
       setIncomeType(currentIncomeType.toLowerCase());
+      setSalaryAmount(currentSalaryAmount ? currentSalaryAmount.toString() : "");
+      setSalaryFrequency(currentSalaryFrequency || "monthly");
       
       // Check if current split matches a preset
       const matchingPreset = SPLIT_OPTIONS.find(
@@ -94,7 +108,9 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
   const wants = Number(form.wantsPct) || 0;
   const savings = Number(form.savingsPct) || 0;
   const total = needs + wants + savings;
-  const isValid = total === 100 && needs > 0 && wants > 0 && savings > 0;
+  const isSplitValid = total === 100 && needs > 0 && wants > 0 && savings > 0;
+  const isSalaryValid = incomeType !== "salary" || (Number(salaryAmount) > 0);
+  const isValid = isSplitValid && isSalaryValid;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -103,6 +119,13 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
     if (!isValid) {
       setError("Percentages must add up to 100% and all must be greater than 0");
       return;
+    }
+    
+    if (incomeType === "salary") {
+      if (!Number(salaryAmount) || Number(salaryAmount) <= 0) {
+        setError("Please enter a valid salary amount");
+        return;
+      }
     }
 
     try {
@@ -124,6 +147,8 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
           savings_pct: savings,
           week_starts_on: weekStartDay.charAt(0).toUpperCase() + weekStartDay.slice(1),
           income_type: incomeType.charAt(0).toUpperCase() + incomeType.slice(1),
+          salary_amount: incomeType === "salary" ? Number(salaryAmount) : null,
+          salary_frequency: incomeType === "salary" ? salaryFrequency : null,
         }),
       });
 
@@ -211,6 +236,42 @@ export function BudgetSettings({ currentSplit, currentWeekStartsOn = "Monday", c
                 </Select>
               </div>
             </div>
+
+            {incomeType === "salary" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-dashed">
+                <div className="space-y-2">
+                  <Label htmlFor="salaryAmount" className="text-sm font-medium">Salary Amount</Label>
+                  <Input
+                    id="salaryAmount"
+                    type="text"
+                    inputMode="decimal"
+                    value={salaryAmount}
+                    onChange={(e) => setSalaryAmount(e.target.value)}
+                    placeholder="e.g. 60000"
+                    className={(!salaryAmount || Number(salaryAmount) <= 0) ? "border-red-400 bg-red-50/50 focus-visible:ring-red-400" : ""}
+                  />
+                  {(!salaryAmount || Number(salaryAmount) <= 0) && (
+                    <p className="text-[11px] text-red-600 font-medium tracking-tight">
+                      * A salary amount is required
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="salaryFrequency" className="text-sm font-medium">Frequency</Label>
+                  <Select value={salaryFrequency} onValueChange={setSalaryFrequency}>
+                    <SelectTrigger id="salaryFrequency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-start gap-2 text-xs text-muted-foreground bg-white p-3 rounded border">
               <InfoIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />

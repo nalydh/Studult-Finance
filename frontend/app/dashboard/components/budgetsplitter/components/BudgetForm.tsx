@@ -63,6 +63,8 @@ function BudgetForm() {
   });
   const [weekStartsOn, setWeekStartsOn] = useState("Monday");
   const [incomeType, setIncomeType] = useState("Salary");
+  const [salaryAmount, setSalaryAmount] = useState<number | null>(null);
+  const [salaryFrequency, setSalaryFrequency] = useState<string | null>(null);
   const [splitAmounts, setSplitAmounts] = useState<SplitData>({
     needs: 0,
     wants: 0,
@@ -86,6 +88,8 @@ function BudgetForm() {
         });
         if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
         if (splitData.income_type) setIncomeType(splitData.income_type);
+        if (splitData.salary_amount) setSalaryAmount(splitData.salary_amount);
+        if (splitData.salary_frequency) setSalaryFrequency(splitData.salary_frequency);
 
         const itemsResult = await authFetch("/budget/items");
         const itemsData = await itemsResult.json();
@@ -94,14 +98,21 @@ function BudgetForm() {
         // Check if a split already exists this week
         const weekResult = await authFetch("/budget/current-week-split");
         const weekData = await weekResult.json();
+        
+        let hasSubmission = false;
         if (weekData && weekData.id) {
           setIsLockedOut(true);
+          hasSubmission = true;
           setIncome((weekData?.amount ?? 0).toString());
           setSplitAmounts({
             needs: weekData.needs_allocated,
             wants: weekData.wants_allocated,
             savings: weekData.savings_allocated,
           });
+        }
+
+        if (!hasSubmission && splitData.expected_weekly_income) {
+          setIncome(Number(splitData.expected_weekly_income).toFixed(2));
         }
       } catch (error) {
         console.error("Error fetching split: ", error);
@@ -155,6 +166,13 @@ function BudgetForm() {
       });
       if (splitData.week_starts_on) setWeekStartsOn(splitData.week_starts_on);
       if (splitData.income_type) setIncomeType(splitData.income_type);
+      if (splitData.salary_amount) setSalaryAmount(splitData.salary_amount);
+      if (splitData.salary_frequency) setSalaryFrequency(splitData.salary_frequency);
+
+      if (!isLockedOut && splitData.expected_weekly_income) {
+        const weeklyFormatted = Number(splitData.expected_weekly_income).toFixed(2);
+        setIncome((prev) => prev !== weeklyFormatted ? weeklyFormatted : prev);
+      }
     } catch (error) {
       console.error("Error refreshing split preferences:", error);
     }
@@ -246,13 +264,24 @@ function BudgetForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card className="w-full">
+      <Card className={`w-full transition-all duration-300 ${!isLockedOut ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/10" : ""}`}>
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold">
+          <CardTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
             Weekly Budget Splitter
+            {!isLockedOut && (
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+            )}
           </CardTitle>
-          <CardDescription className="text-center text-gray-600">
-            Week of {format(weekStart, "MMM dd")} - {format(weekEnd, "MMM dd, yyyy")}
+          <CardDescription className="text-center text-gray-600 flex flex-col items-center gap-2">
+            <span>Week of {format(weekStart, "MMM dd")} - {format(weekEnd, "MMM dd, yyyy")}</span>
+            {!isLockedOut && (
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                Awaiting your submission
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -393,6 +422,8 @@ function BudgetForm() {
               currentSplit={splitData}
               currentWeekStartsOn={weekStartsOn}
               currentIncomeType={incomeType}
+              currentSalaryAmount={salaryAmount}
+              currentSalaryFrequency={salaryFrequency}
               onSplitUpdated={refreshSplitPreferences}
             />
             </div>
