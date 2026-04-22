@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
@@ -33,7 +33,7 @@ function FadeCard({
   );
 }
 
-function DashboardContent({ onReset }: { onReset: () => void }) {
+function DashboardContent() {
   const { data: session, status } = useSession();
   const userName = session?.user?.name?.split(" ")[0] ?? null;
 
@@ -42,6 +42,7 @@ function DashboardContent({ onReset }: { onReset: () => void }) {
 
   const [isCheckingPrefs, setIsCheckingPrefs] = useState(true);
   const [showTour, setShowTour] = useState(false);
+  const [tourKey, setTourKey] = useState(0);
 
   // Gate: wait for all 4 cards to finish their initial fetch before revealing the dashboard
   const CARDS_TOTAL = 4;
@@ -93,77 +94,83 @@ function DashboardContent({ onReset }: { onReset: () => void }) {
           <p className="text-sm text-muted-foreground">Loading your dashboard…</p>
         </div>
       )}
-      <div className={`max-w-7xl mx-auto px-4 py-6 ${!allCardsReady ? "invisible" : ""}`}>
-      {/* Header */}
+
+      {/* Tour — always mounted outside invisible gate so it can run over the spinner */}
       {showTour && (
         <DashboardTour
+          key={tourKey}
           run={showTour}
-          onFinish={() => { setShowTour(false); onReset(); }}
+          onFinish={() => setShowTour(false)}
         />
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {userName ? `Welcome back, ${userName[0].toUpperCase() + userName.slice(1)}!` : "Dashboard"}
-          </h1>
-          {userName && (
-            <p className="text-sm text-muted-foreground mt-0.5">Here’s your financial overview.</p>
-          )}
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowTour(true)}
-            title="Start guided tour"
-            className="group flex items-center justify-center w-9 h-9 rounded-full border-2 border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow-emerald-200 hover:shadow-md"
-          >
-            <HelpCircle className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-          </button>
-          <Link
-            href="/analytics"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors duration-200 group"
-          >
-            View Analytics
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
-          </Link>
-        </div>
-      </div>
 
-      <FadeCard delay={0}>
-        <CheckInBanner />
-      </FadeCard>
-
-      {/* Canvas Grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
-        {/* Left column: Budget Splitter */}
-        <div className="col-span-1 lg:col-span-4 space-y-6">
-          <FadeCard delay={80}>
-            <BudgetForm onReady={handleCardReady} />
-          </FadeCard>
-        </div>
-
-        {/* Right column: Net Worth Card → Accounts → Assets */}
-        <div className="col-span-1 lg:col-span-8 space-y-6">
-          <FadeCard delay={160}>
-            <NetWorthCard onReady={handleCardReady} />
-          </FadeCard>
-          <div id="tour-account-ledger" style={{ scrollMarginTop: '80px' }}>
-            <FadeCard delay={240}>
-              <AccountLedger onReady={handleCardReady} />
-            </FadeCard>
+      {/* Header — always visible, even during card-loading, so Help button is always clickable */}
+      <div className="max-w-7xl mx-auto px-4 pt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">
+              {userName ? `Welcome back, ${userName[0].toUpperCase() + userName.slice(1)}!` : "Dashboard"}
+            </h1>
+            {userName && (
+              <p className="text-sm text-muted-foreground mt-0.5">Here's your financial overview.</p>
+            )}
           </div>
-          <div id="tour-asset-ledger" style={{ scrollMarginTop: '80px' }}>
-            <FadeCard delay={320}>
-              <AssetLedger onReady={handleCardReady} />
-            </FadeCard>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { setTourKey((k) => k + 1); setShowTour(true); }}
+              title="Start guided tour"
+              className="group flex items-center justify-center w-9 h-9 rounded-full border-2 border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow-emerald-200 hover:shadow-md"
+            >
+              <HelpCircle className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+            </button>
+            <Link
+              href="/analytics"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors duration-200 group"
+            >
+              View Analytics
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+            </Link>
           </div>
         </div>
       </div>
+
+      {/* Dashboard body — invisible until all cards have fetched */}
+      <div className={`max-w-7xl mx-auto px-4 pb-6 ${!allCardsReady ? "invisible" : ""}`}>
+        <FadeCard delay={0}>
+          <CheckInBanner />
+        </FadeCard>
+
+        {/* Canvas Grid layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
+          {/* Left column: Budget Splitter */}
+          <div className="col-span-1 lg:col-span-4 space-y-6">
+            <FadeCard delay={80}>
+              <BudgetForm onReady={handleCardReady} />
+            </FadeCard>
+          </div>
+
+          {/* Right column: Net Worth Card → Accounts → Assets */}
+          <div className="col-span-1 lg:col-span-8 space-y-6">
+            <FadeCard delay={160}>
+              <NetWorthCard onReady={handleCardReady} />
+            </FadeCard>
+            <div id="tour-account-ledger" style={{ scrollMarginTop: '80px' }}>
+              <FadeCard delay={240}>
+                <AccountLedger onReady={handleCardReady} />
+              </FadeCard>
+            </div>
+            <div id="tour-asset-ledger" style={{ scrollMarginTop: '80px' }}>
+              <FadeCard delay={320}>
+                <AssetLedger onReady={handleCardReady} />
+              </FadeCard>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
 }
 
 export default function DashboardPage() {
-  const [pageKey, setPageKey] = useState(0);
-  return <DashboardContent key={pageKey} onReset={() => setPageKey((k) => k + 1)} />;
+  return <DashboardContent />;
 }
