@@ -108,21 +108,23 @@ function DashboardContent() {
       <div className="max-w-7xl mx-auto px-4 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
           <div>
-            <h1 className="text-2xl font-bold">
-              {userName ? `Welcome back, ${userName[0].toUpperCase() + userName.slice(1)}!` : "Dashboard"}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">
+                {userName ? `Welcome back, ${userName[0].toUpperCase() + userName.slice(1)}!` : "Dashboard"}
+              </h1>
+              <button
+                onClick={() => { setTourKey((k) => k + 1); setShowTour(true); }}
+                title="Start guided tour"
+                className="group flex items-center justify-center w-7 h-7 rounded-full border-2 border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow-emerald-200 hover:shadow-md"
+              >
+                <HelpCircle className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110" />
+              </button>
+            </div>
             {userName && (
               <p className="text-sm text-muted-foreground mt-0.5">Here's your financial overview.</p>
             )}
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => { setTourKey((k) => k + 1); setShowTour(true); }}
-              title="Start guided tour"
-              className="group flex items-center justify-center w-9 h-9 rounded-full border-2 border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow-emerald-200 hover:shadow-md"
-            >
-              <HelpCircle className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-            </button>
             <Link
               href="/analytics"
               className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors duration-200 group"

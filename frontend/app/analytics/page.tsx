@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Sparkles, Lock, Send, TrendingUp, PiggyBank, ShoppingCart, ChevronRight, Info, ChevronLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Lock, Send, TrendingUp, PiggyBank, ShoppingCart, ChevronRight, Info, ChevronLeft, Loader2, HelpCircle } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, LineChart, Line
@@ -11,6 +11,7 @@ import {
 import { API_BASE } from "@/lib/api";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { PortfolioPanel } from "./InvestmentAnalyticsTable";
+import AnalyticsTour from "@/components/AnalyticsTour";
 
 // ── Universal colour palette — mirrors wallet icon colours ──
 const C = {
@@ -106,6 +107,17 @@ function InteractiveLegend({
   );
 }
 
+// ── Smart Y-axis domain for near-zero or empty data ──
+function niceNWDomain(values: number[]): [number, number] {
+  const nonZero = values.filter(v => v > 0);
+  if (nonZero.length === 0) return [0, 1000];
+  const max = Math.max(...nonZero);
+  // choose a step size that keeps ticks readable
+  const step = max <= 1000 ? 200 : max <= 5000 ? 500 : max <= 20000 ? 2000 : max <= 100000 ? 10000 : 50000;
+  const niceMax = Math.ceil(max / step) * step;
+  return [0, niceMax];
+}
+
 export default function AnalyticsPage() {
   const [data, setData]           = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,6 +125,8 @@ export default function AnalyticsPage() {
   const [hiddenLines, setHiddenLines] = useState<Record<string, boolean>>({});
   const [hiddenBars,  setHiddenBars]  = useState<Record<string, boolean>>({});
   const [logPage,     setLogPage]     = useState(0);
+  const [showTour,    setShowTour]    = useState(false);
+  const [tourKey,     setTourKey]     = useState(0);
   const LOG_PAGE_SIZE = 10;
 
   const toggle = (setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>, key: string) =>
@@ -181,13 +195,35 @@ export default function AnalyticsPage() {
 
       <div className="max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-7 flex flex-col gap-6">
 
+        {/* ── Analytics Tour ── */}
+        {showTour && (
+          <AnalyticsTour
+            key={tourKey}
+            run={showTour}
+            onFinish={() => setShowTour(false)}
+          />
+        )}
+
         {/* ── Header ── */}
         <FadeCard delay={0}>
           <div>
             <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-2 duration-200">
               <ArrowLeft className="w-4 h-4" /> Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Analytics</h1>
+            <div className="flex items-center gap-2 mt-4">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Analytics</h1>
+              <button
+                id="tour-analytics-help"
+                onClick={() => { setTourKey((k) => k + 1); setShowTour(true); }}
+                title="Start analytics tour"
+                className="group flex items-center justify-center w-7 h-7 rounded-full border-2 border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200 shadow-sm hover:shadow-emerald-200 hover:shadow-md shrink-0"
+              >
+                <HelpCircle className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110" />
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-slate-500 max-w-xl">
+              A complete picture of your financial health all powered by your regular check-ins.
+            </p>
           </div>
         </FadeCard>
 
@@ -195,6 +231,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
           {/* ── Chart 1: Net Worth ── */}
+          <div id="tour-net-worth-chart" className="h-full">
           <FadeCard delay={100} className="h-full">
           <Card className="h-[420px] flex flex-col shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-0 pt-5 px-5">
@@ -227,20 +264,22 @@ export default function AnalyticsPage() {
 
             <CardContent className="flex-1 min-h-0 flex flex-col pt-2 px-3 pb-4">
               {/* Time filter */}
-              <div className="flex gap-1.5 mb-2 px-2">
-                {(["3M", "6M", "1Y", "ALL"] as const).map(opt => (
+              <div className="flex gap-0 mb-2 px-2">
+                <div className="flex flex-1 border border-slate-200 rounded-lg overflow-hidden">
+                {(["3M", "6M", "1Y", "ALL"] as const).map((opt, i, arr) => (
                   <button
                     key={opt}
                     onClick={() => setTimeRange(opt)}
-                    className={`flex-1 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                    className={`flex-1 py-1 text-[11px] font-medium transition-colors border-r border-slate-200 last:border-r-0 ${
                       timeRange === opt
-                        ? "bg-slate-900 text-white shadow-sm"
+                        ? "bg-slate-900 text-white"
                         : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                     }`}
                   >
                     {opt}
                   </button>
                 ))}
+                </div>
               </div>
 
               <div className="flex-1 min-h-0 [&_.recharts-surface]:outline-none">
@@ -255,20 +294,26 @@ export default function AnalyticsPage() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="month" axisLine={false} tickLine={false} tick={TICK} dy={14} minTickGap={24} />
-                      <YAxis axisLine={false} tickLine={false} tick={TICK} tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`} />
+                      <YAxis
+                        axisLine={false} tickLine={false} tick={TICK}
+                        domain={niceNWDomain(filteredNW.map(d => d.value))}
+                        tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                      />
                       <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, "Net Worth"]} contentStyle={TIP_STYLE} />
                       <Area type="monotone" dataKey="value" stroke={C.netWorth} strokeWidth={2.5} fill="url(#gNW)" />
                     </AreaChart>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data</div>
+                    <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data yet — submit your first check-in to get started.</div>
                   )}
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
           </FadeCard>
+          </div>
 
           {/* ── Chart 2: Net Worth Breakdown ── */}
+          <div id="tour-breakdown-chart" className="h-full">
           <FadeCard delay={200} className="h-full">
           <Card className="h-[420px] flex flex-col shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-0 pt-5 px-5">
@@ -316,8 +361,10 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
           </FadeCard>
+          </div>
 
           {/* ── Chart 3: Weekly Allocation Trends ── */}
+          <div id="tour-weekly-allocation-chart" className="h-full">
           <FadeCard delay={300} className="h-full">
           <Card className="h-[420px] flex flex-col shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-0 pt-5 px-5">
@@ -335,39 +382,44 @@ export default function AnalyticsPage() {
             </CardHeader>
 
             <CardContent className="flex-1 min-h-0 flex flex-col pt-2 px-3 pb-4">
-              <InteractiveLegend items={trendsItems} hidden={hiddenLines} onToggle={k => toggle(setHiddenLines, k)} />
-              <div className="flex-1 min-h-0 [&_.recharts-surface]:outline-none">
-                <ResponsiveContainer width="100%" height="100%">
-                  {data.allocationTrendsData?.length > 0 ? (
-                    <LineChart data={data.allocationTrendsData} margin={CHART_MARGIN}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={TICK} dy={14} minTickGap={24} />
-                      <YAxis axisLine={false} tickLine={false} tick={TICK} tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`} />
-                      <Tooltip
-                        formatter={(v: number, name: string) => {
-                          const lm: Record<string, string> = { needs: "Needs", wants: "Wants", saved: "Savings" };
-                          return [`$${v.toLocaleString()}`, lm[name] || name];
-                        }}
-                        contentStyle={TIP_STYLE}
-                      />
-                      <Line hide={hiddenLines["needs"]} type="monotone" dataKey="needs" name="Needs"   stroke={C.needs}   strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: C.needs   }} activeDot={{ r: 5 }} />
-                      <Line hide={hiddenLines["wants"]} type="monotone" dataKey="wants" name="Wants"   stroke={C.wants}   strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: C.wants   }} activeDot={{ r: 5 }} />
-                      <Line hide={hiddenLines["saved"]} type="monotone" dataKey="saved" name="Savings" stroke={C.savings} strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: C.savings }} activeDot={{ r: 5 }} />
-                    </LineChart>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data</div>
-                  )}
-                </ResponsiveContainer>
-              </div>
+              {data.allocationTrendsData?.length > 0 ? (
+                <>
+                  <InteractiveLegend items={trendsItems} hidden={hiddenLines} onToggle={k => toggle(setHiddenLines, k)} />
+                  <div className="flex-1 min-h-0 [&_.recharts-surface]:outline-none">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data.allocationTrendsData} margin={CHART_MARGIN}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={TICK} dy={14} minTickGap={24} />
+                        <YAxis axisLine={false} tickLine={false} tick={TICK} tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`} />
+                        <Tooltip
+                          formatter={(v: number, name: string) => {
+                            const lm: Record<string, string> = { needs: "Needs", wants: "Wants", saved: "Savings" };
+                            return [`$${v.toLocaleString()}`, lm[name] || name];
+                          }}
+                          contentStyle={TIP_STYLE}
+                        />
+                        <Line hide={hiddenLines["needs"]} type="monotone" dataKey="needs" name="Needs"   stroke={C.needs}   strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: C.needs   }} activeDot={{ r: 5 }} />
+                        <Line hide={hiddenLines["wants"]} type="monotone" dataKey="wants" name="Wants"   stroke={C.wants}   strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: C.wants   }} activeDot={{ r: 5 }} />
+                        <Line hide={hiddenLines["saved"]} type="monotone" dataKey="saved" name="Savings" stroke={C.savings} strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: C.savings }} activeDot={{ r: 5 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-4">
+                  <p className="text-slate-400 text-sm">Submit your first weekly check-in on the dashboard to see your spending trends here.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
           </FadeCard>
+          </div>
 
         </div>
 
         {/* ── Income Log — connected beneath Weekly Allocation ── */}
         <FadeCard delay={400}>
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div id="tour-income-log" className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
             <div>
@@ -461,7 +513,9 @@ export default function AnalyticsPage() {
 
         {/* ── Asset + Investment Portfolio (side by side) ── */}
         <FadeCard delay={500}>
-          <PortfolioPanel />
+          <div id="tour-portfolio-panel">
+            <PortfolioPanel />
+          </div>
         </FadeCard>
 
         <FadeCard delay={600}>
