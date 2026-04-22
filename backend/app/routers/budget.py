@@ -291,6 +291,22 @@ def calculate_and_insert_budget(
         if not pref:
             raise HTTPException(status_code=400, detail="No preferences found")
 
+        # ── Streak Logic ── #
+        if pref.last_submission_date:
+            days_since_last = (now - pref.last_submission_date).days
+            if days_since_last < 8:
+                pref.current_streak += 1
+            else:
+                pref.current_streak = 1 # Broken streak resetting to 1
+        else:
+            pref.current_streak = 1
+            
+        pref.last_submission_date = now
+
+        # Add AI tokens if they hit a modulo of 5 (e.g. 5, 10, 15 weeks)
+        if pref.current_streak > 0 and pref.current_streak % 5 == 0:
+            pref.ai_tokens += 3
+
         needs_amount   = (pref.needs_pct   / 100) * income_event.amount
         wants_amount   = (pref.wants_pct   / 100) * income_event.amount
         savings_amount = (pref.savings_pct / 100) * income_event.amount
@@ -302,10 +318,16 @@ def calculate_and_insert_budget(
         income_event.strategy_name     = pref.strategy_name
         income_event.source            = "Income"
 
+        session.add(pref)
         session.add(income_event)
         session.commit()
         session.refresh(income_event)
-        return income_event
+        
+        return {
+            "income_event": income_event,
+            "streak": pref.current_streak,
+            "ai_tokens": pref.ai_tokens
+        }
     except HTTPException:
         raise
     except Exception as error:

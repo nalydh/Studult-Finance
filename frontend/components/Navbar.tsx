@@ -27,12 +27,21 @@ export default function Navbar() {
     // @ts-expect-error — accessToken added in auth.ts callbacks
     const token: string | undefined = session.accessToken;
     if (!token) return;
-    fetch(`${API_BASE}/snapshots/streak`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => setStreak(data.streak ?? 0))
-      .catch(() => setStreak(0));
+
+    function fetchStreak() {
+      fetch(`${API_BASE}/snapshots/streak`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((data) => setStreak(data.streak ?? 0))
+        .catch(() => setStreak(0));
+    }
+
+    fetchStreak();
+
+    // Listen for manual refetch triggers
+    window.addEventListener("streak-updated", fetchStreak);
+    return () => window.removeEventListener("streak-updated", fetchStreak);
   }, [isAuthenticated, session]);
 
   // Close profile dropdown on outside click
@@ -82,9 +91,21 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* ── Authenticated: Profile dropdown ── */}
+          {/* ── Authenticated: Streak & Profile ── */}
           {isAuthenticated && (
-            <div className="relative" ref={profileRef}>
+            <div className="flex items-center gap-3 relative" ref={profileRef}>
+              
+              {/* Gamified Streak Badge */}
+              <div 
+                title="Current Weekly Streak"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20"
+              >
+                <Flame className="w-4 h-4 text-orange-500 saturate-150" fill="currentColor" />
+                <span className="text-sm font-bold text-orange-400">
+                  {streak === null ? "..." : streak}
+                </span>
+              </div>
+
               <button
                 id="navbar-profile-button"
                 onClick={() => setProfileOpen((o) => !o)}
@@ -96,7 +117,7 @@ export default function Navbar() {
 
               {/* Dropdown */}
               {profileOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/50 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute top-full right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/50 py-1 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
                   {/* User info */}
                   <div className="px-4 py-3 border-b border-zinc-800">
                     <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-1">
@@ -108,30 +129,6 @@ export default function Navbar() {
                     >
                       {session?.user?.email ?? "—"}
                     </p>
-                  </div>
-
-                  {/* Streak */}
-                  <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
-                      <Flame className="h-4 w-4 text-orange-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-500">Check-in streak</p>
-                      <p id="navbar-streak" className="text-sm font-bold text-zinc-100">
-                        {streak === null ? (
-                          <span className="text-zinc-500 font-normal">Loading…</span>
-                        ) : streak === 0 ? (
-                          <span className="text-zinc-400 font-normal">No check-ins yet</span>
-                        ) : (
-                          <>
-                            {streak}{" "}
-                            <span className="font-normal text-zinc-400">
-                              {streak === 1 ? "month" : "months"} in a row
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
                   </div>
 
                   {/* Sign out */}

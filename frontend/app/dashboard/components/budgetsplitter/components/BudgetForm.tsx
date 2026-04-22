@@ -21,7 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PiggyBankIcon, TrendingUp, Wallet, Settings2, Lock } from "lucide-react";
+import { PiggyBankIcon, TrendingUp, Wallet, Settings2, Lock, Flame } from "lucide-react";
 import { BreakdownSheet } from "./BreakdownSheet";
 import { BudgetSettings } from "./BudgetSettings";
 import { startOfWeek, endOfWeek, format } from "date-fns";
@@ -52,6 +52,43 @@ function frequencyLabel(frequency: BudgetItem["frequency"]) {
   return "week";
 }
 
+// ── Gamification Modal ──
+function MilestoneModal({ streak, onClose }: { streak: number, onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
+  let message = `You've reached a massive ${streak} check-in streak! Incredible dedication!`;
+  if (streak === 1) message = "Amazing work on submitting your first submission! Establishing the habit is the hardest part.";
+  else if (streak === 7) message = "You've reached a 7 check-in streak! A solid week of consistency!";
+  else if (streak === 50) message = "50 check-ins! You're almost at a full year of consistent tracking.";
+  else if (streak === 100) message = "100 check-ins! Absolute dedication to your financial future.";
+  else if (streak === 365) message = "365 check-ins! A full 'year' of streaks. Your consistency is incredibly inspiring.";
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl shadow-orange-900/20 animate-in zoom-in-95 duration-500 fade-in slide-in-from-bottom-4">
+        <div className="mx-auto w-24 h-24 bg-gradient-to-tr from-orange-600/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-6 relative">
+          <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-ping opacity-20"></div>
+          <Flame className="w-12 h-12 text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" fill="currentColor" />
+        </div>
+        <h2 className="text-3xl font-black text-white mb-3">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-yellow-500">
+            {streak} Streak!
+          </span>
+        </h2>
+        <p className="text-zinc-400 leading-relaxed mb-8">{message}</p>
+        <button 
+          onClick={onClose} 
+          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-orange-500/25 transition-all active:scale-[0.98]"
+        >
+          Keep it up!
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BudgetForm({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [income, setIncome] = useState("");
@@ -73,6 +110,7 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
   const [isLoading, setIsLoading] = useState(true);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [isLockedOut, setIsLockedOut] = useState(false);
+  const [milestoneCelebration, setMilestoneCelebration] = useState<number | null>(null);
 
   // Fetch user's split preferences on mount and budget items
   useEffect(() => {
@@ -215,10 +253,17 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
       console.log("Received split:", data);
 
       setSplitAmounts({
-        needs: data.needs_allocated,
-        wants: data.wants_allocated,
-        savings: data.savings_allocated,
+        needs: data.income_event.needs_allocated,
+        wants: data.income_event.wants_allocated,
+        savings: data.income_event.savings_allocated,
       });
+
+      // Gamification Check
+      const updatedStreak = data.streak;
+      const milestones = [1, 7, 50, 100, 365, 1000, 2000, 3000, 4000, 5000];
+      if (milestones.includes(updatedStreak)) {
+        setMilestoneCelebration(updatedStreak);
+      }
 
       setIsLockedOut(true);
     } catch (error) {
@@ -264,6 +309,17 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
   ];
 
   return (
+    <>
+    {milestoneCelebration !== null && (
+      <MilestoneModal 
+        streak={milestoneCelebration} 
+        onClose={() => {
+          setMilestoneCelebration(null);
+          // Trigger a window events so the navbar refetches the global streak immediately
+          window.dispatchEvent(new Event("streak-updated"));
+        }} 
+      />
+    )}
     <form onSubmit={handleSubmit}>
       <Card id="tour-budget-splitter" style={{ scrollMarginTop: '80px' }} className={`w-full transition-all duration-300 ${!isLockedOut ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/10" : ""}`}>
         <CardHeader>
@@ -448,6 +504,7 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
         </CardContent>
       </Card>
     </form>
+    </>
   );
 }
 

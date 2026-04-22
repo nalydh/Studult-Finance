@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlmodel import Session, select, func
 from app.database import get_session
 from app.models.snapshot import NetWorthSnapshot
+from app.models.preference import Preference
 from app.models.account import Account
 from app.models.asset import Asset
 from app.auth.dependencies import get_current_user_id
@@ -15,37 +16,17 @@ def get_streak(
     user_id: int = Depends(get_current_user_id),
     session: Session = Depends(get_session),
 ):
-    """
-    Returns the number of consecutive months (including the current month
-    if checked in) that the authenticated user has completed a check-in.
-    """
-    snapshots = session.exec(
-        select(NetWorthSnapshot)
-        .where(NetWorthSnapshot.user_id == user_id)
-        .order_by(NetWorthSnapshot.snapshot_date.desc())
-    ).all()
+  pref = session.exec(
+      select(Preference).where(Preference.user_id == user_id).limit(1)
+  ).first()
 
-    if not snapshots:
-        return {"streak": 0}
+  if not pref:
+      return {"streak": 0, "ai_tokens": 0}
 
-    checked_months = set()
-    for s in snapshots:
-        d = s.snapshot_date
-        checked_months.add((d.year, d.month))
-
-    latest = snapshots[0].snapshot_date
-    year, month = latest.year, latest.month
-    streak = 0
-
-    while (year, month) in checked_months:
-        streak += 1
-        if month == 1:
-            month = 12
-            year -= 1
-        else:
-            month -= 1
-
-    return {"streak": streak}
+  return {
+      "streak": pref.current_streak,
+      "ai_tokens": pref.ai_tokens
+  }
 
 
 @router.post("/")
