@@ -52,7 +52,7 @@ function frequencyLabel(frequency: BudgetItem["frequency"]) {
   return "week";
 }
 
-function BudgetForm() {
+function BudgetForm({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [income, setIncome] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -118,6 +118,7 @@ function BudgetForm() {
         console.error("Error fetching split: ", error);
       } finally {
         setIsLoading(false);
+        onReady?.();
       }
     }
     fetchSplit();
@@ -264,7 +265,7 @@ function BudgetForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card className={`w-full transition-all duration-300 ${!isLockedOut ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/10" : ""}`}>
+      <Card id="tour-budget-splitter" style={{ scrollMarginTop: '80px' }} className={`w-full transition-all duration-300 ${!isLockedOut ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/10" : ""}`}>
         <CardHeader>
           <CardTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
             Weekly Budget Splitter
@@ -290,6 +291,7 @@ function BudgetForm() {
               Weekly Net Income from Salary
             </label>
             <Input
+              id="tour-income-input"
               type="text"
               inputMode="decimal"
               value={income}
@@ -310,7 +312,7 @@ function BudgetForm() {
                 {splitData?.savings || 0}%
               </p>
             </div>
-            <div>
+            <div id="tour-budget-items" style={{ scrollMarginTop: '80px' }}>
               {walletTypes.map((wallet) => {
                 // Calculate unallocated amount
                 const totalItemized = wallet.items.reduce(
@@ -324,9 +326,7 @@ function BudgetForm() {
                     key={wallet.name}
                     type="single"
                     collapsible
-                    defaultValue={
-                      wallet.items.length > 0 ? wallet.name : undefined
-                    }
+                    defaultValue={wallet.items.length > 0 ? wallet.name : undefined}
                   >
                     <AccordionItem value={wallet.name} className="border-none">
                       <div className="flex items-center justify-between gap-2 mb-2">
@@ -417,7 +417,7 @@ function BudgetForm() {
             </div>
           )}
           <div className="flex gap-3">
-            <div className="shrink-0">
+            <div id="tour-budget-settings" className="shrink-0">
             <BudgetSettings 
               currentSplit={splitData}
               currentWeekStartsOn={weekStartsOn}
@@ -429,6 +429,7 @@ function BudgetForm() {
             </div>
             <div className="flex-1">
             <Button
+              id="tour-submit-button"
               type="submit"
               className="w-full bg-primary-dark hover:bg-primary-light"
               disabled={isLockedOut}

@@ -11,4 +11,5 @@ class Preference(SQLModel, table=True):
   income_type: str = Field(default="Salary")
   salary_amount: float | None = None
   salary_frequency: str | None = None
+  tutorial_completed: bool = Field(default=False)
   

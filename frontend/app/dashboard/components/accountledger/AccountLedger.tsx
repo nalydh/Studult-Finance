@@ -54,7 +54,7 @@ function fmt(n: number) {
 
 /* ══════════════════════════════════════════════════════════════════ */
 
-export default function AccountLedger() {
+export default function AccountLedger({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,6 +84,7 @@ export default function AccountLedger() {
       console.error("Error fetching accounts:", err);
     } finally {
       setIsLoading(false);
+      onReady?.();
     }
   }, [authFetch]);
 

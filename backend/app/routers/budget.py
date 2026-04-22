@@ -24,6 +24,7 @@ class PreferenceUpdate(BaseModel):
     income_type: str | None = None
     salary_amount: float | None = None
     salary_frequency: str | None = None
+    tutorial_completed: bool | None = None
 
 
 router = APIRouter(prefix="/budget", tags=["budget"])
@@ -120,6 +121,8 @@ def update_preference(
             pref.salary_amount = data.salary_amount
         if data.salary_frequency is not None:
             pref.salary_frequency = data.salary_frequency
+        if data.tutorial_completed is not None:
+            pref.tutorial_completed = data.tutorial_completed
 
         if any(x is not None for x in [data.needs_pct, data.wants_pct, data.savings_pct]):
             total = pref.needs_pct + pref.wants_pct + pref.savings_pct

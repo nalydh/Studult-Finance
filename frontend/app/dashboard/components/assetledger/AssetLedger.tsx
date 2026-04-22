@@ -22,7 +22,7 @@ import { ManageCategoriesDialog } from "./ManageCategoriesDialog";
 import { API_BASE } from "@/lib/api";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 
-export default function AssetLedger() {
+export default function AssetLedger({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +89,7 @@ export default function AssetLedger() {
       console.error("Error fetching assets:", error);
     } finally {
       setIsLoading(false);
+      onReady?.();
     }
   }, [authFetch]);
 

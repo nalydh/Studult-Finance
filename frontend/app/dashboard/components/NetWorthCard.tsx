@@ -15,7 +15,7 @@ interface Snapshot {
   net_worth: number;
 }
 
-export function NetWorthCard() {
+export function NetWorthCard({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [latest, setLatest] = useState<Snapshot | null>(null);
   const [previous, setPrevious] = useState<Snapshot | null>(null);
@@ -35,7 +35,7 @@ export function NetWorthCard() {
         }
       })
       .catch((err) => console.error("Error fetching snapshots:", err))
-      .finally(() => setIsLoading(false));
+      .finally(() => { setIsLoading(false); onReady?.(); });
   }, [authFetch]);
 
   if (isLoading) {
