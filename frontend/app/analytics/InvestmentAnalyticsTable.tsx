@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, TrendingUp, Package, Trash2 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -595,9 +596,15 @@ export function PortfolioPanel() {
         </div>
       </div>
 
-      {/* Modals */}
-      {selectedGroup   && <AssetGroupModal   group={selectedGroup}     onClose={() => setSelectedGroup(null)}   />}
-      {selectedAccount && <InvestmentModal   account={selectedAccount} onClose={() => setSelectedAccount(null)} />}
+      {/* Modals via Portal to escape stacking contexts */}
+      {selectedGroup && typeof document !== 'undefined' && createPortal(
+        <AssetGroupModal   group={selectedGroup}     onClose={() => setSelectedGroup(null)}   />,
+        document.body
+      )}
+      {selectedAccount && typeof document !== 'undefined' && createPortal(
+        <InvestmentModal   account={selectedAccount} onClose={() => setSelectedAccount(null)} />,
+        document.body
+      )}
     </>
   );
 }

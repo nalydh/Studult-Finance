@@ -426,15 +426,6 @@ export default function AnalyticsPage() {
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Income Log</p>
               <p className="text-sm font-semibold text-slate-900 mt-0.5">All income events &amp; allocations</p>
             </div>
-            <InfoTooltip
-              title="About the Income Log"
-              lines={[
-                { color: C.needs,   label: "Needs",   desc: "Essential expense allocation from this income" },
-                { color: C.wants,   label: "Wants",   desc: "Discretionary spend allocation" },
-                { color: C.savings, label: "Savings", desc: "Amount directed to savings/investments" },
-                { color: "#94a3b8", label: "Strategy", desc: "The 50/30/20 split strategy used at time of entry" },
-              ]}
-            />
           </div>
 
           {/* Table */}
