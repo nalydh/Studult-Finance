@@ -355,6 +355,7 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
               prefix="$"
               placeholder="0.00"
               pattern="[0-9]*\.?[0-9]*"
+              maxLength={10}
               className="focus-visible:ring-primary-light"
               disabled={isLockedOut}
             />

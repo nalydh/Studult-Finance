@@ -30,6 +30,8 @@ interface Account {
 
 const CATEGORY_OPTIONS = ["Cash", "Investment", "Liability"] as const;
 
+const MAX_ACCOUNTS = 10;
+
 const CATEGORY_STYLE: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
   Cash: {
     bg: "bg-emerald-100 dark:bg-emerald-950",
@@ -188,10 +190,14 @@ export default function AccountLedger({ onReady }: { onReady?: () => void }) {
             Financial Accounts
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {accounts.length} account{accounts.length !== 1 && "s"}
+            {accounts.length}/{MAX_ACCOUNTS} accounts
           </p>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
+        <Button 
+          size="sm" 
+          onClick={() => setAddOpen(true)}
+          disabled={accounts.length >= MAX_ACCOUNTS}
+        >
           <Plus className="h-4 w-4 mr-1" />
           Add Account
         </Button>

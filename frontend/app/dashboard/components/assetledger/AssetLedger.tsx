@@ -22,6 +22,8 @@ import { ManageCategoriesDialog } from "./ManageCategoriesDialog";
 import { API_BASE } from "@/lib/api";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 
+const MAX_ASSETS = 50;
+
 export default function AssetLedger({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -264,10 +266,10 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
             <Package className="h-5 w-5" />
             Asset Ledger
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            {filteredAssets.length} item{filteredAssets.length !== 1 && "s"} &middot; $
-            {filteredValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}{" "}
-            {selectedTab === "All" ? "total value" : "in category"}
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+            <span>{`${activeAssets.length}/${MAX_ASSETS} assets`}</span>
+            <span className="h-1 w-1 rounded-full bg-muted-foreground/40 inline-block" />
+            <span>${filteredValue.toLocaleString("en-US", { minimumFractionDigits: 2 })} {selectedTab === "All" ? "total value" : `in ${selectedTab}`}</span>
           </p>
         </div>
 
@@ -287,6 +289,7 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
             onSubmit={handleAddAsset}
             onCreateCategory={handleCreateCategory}
             onDeleteCategory={handleDeleteCategory}
+            isAtLimit={activeAssets.length >= MAX_ASSETS}
           />
         </div>
       </CardHeader>

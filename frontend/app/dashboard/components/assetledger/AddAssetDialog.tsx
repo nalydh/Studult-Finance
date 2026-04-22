@@ -27,10 +27,11 @@ interface AddAssetDialogProps {
   onSubmit: (data: { name: string; category: string; purchase_price: number; market_value: number | null; date_acquired: string }) => Promise<void>;
   onCreateCategory: (name: string, colorIndex: number) => Promise<void>;
   onDeleteCategory: (id: number) => Promise<void>;
+  isAtLimit?: boolean;
 }
 
 export function AddAssetDialog({
-  open, onOpenChange, categories, selectedTab, onSubmit, onCreateCategory, onDeleteCategory,
+  open, onOpenChange, categories, selectedTab, onSubmit, onCreateCategory, onDeleteCategory, isAtLimit,
 }: AddAssetDialogProps) {
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -121,7 +122,7 @@ export function AddAssetDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" disabled={isAtLimit}>
           <Plus className="h-4 w-4 mr-1" />
           Add Asset
         </Button>
