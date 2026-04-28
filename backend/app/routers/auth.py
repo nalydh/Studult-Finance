@@ -26,6 +26,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: Optional[str] = None
+    marketing_emails_enabled: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -37,6 +38,7 @@ class GoogleLoginRequest(BaseModel):
     email: str
     name: Optional[str] = None
     google_id: str
+    marketing_emails_enabled: bool = False
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -122,6 +124,7 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
         name=req.name,
         hashed_password=hash_password(req.password),
         email_verified=False,
+        marketing_emails_enabled=req.marketing_emails_enabled,
     )
     session.add(user)
     session.commit()
@@ -170,6 +173,7 @@ def google_signin(req: GoogleLoginRequest, session: Session = Depends(get_sessio
                 name=req.name,
                 google_id=req.google_id,
                 email_verified=True,
+                marketing_emails_enabled=req.marketing_emails_enabled,
             )
             session.add(user)
 
@@ -283,6 +287,24 @@ def reset_password(req: ResetPasswordRequest, session: Session = Depends(get_ses
     db_token.used = True
     session.commit()
     return {"message": "Password updated successfully"}
+
+
+@router.get("/unsubscribe")
+def unsubscribe(token: str, session: Session = Depends(get_session)):
+    """Unsubscribe from marketing/reminder emails using a secure token."""
+    from app.auth.utils import verify_unsubscribe_token
+    user_id = verify_unsubscribe_token(token)
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Invalid or expired unsubscribe link")
+        
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.marketing_emails_enabled = False
+    session.commit()
+    return {"message": "Successfully unsubscribed from weekly reminders."}
 
 
 @router.get("/me")

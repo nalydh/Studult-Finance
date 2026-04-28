@@ -32,9 +32,13 @@ def create_db_and_tables():
 async def lifespan(app: FastAPI):
     print("Startup: Creating database tables...")
     create_db_and_tables()
+    
+    from app.scheduler import start_scheduler, stop_scheduler
+    start_scheduler()
+    
     yield
     print("Shutdown: Cleaning up...")
-
+    stop_scheduler()
 
 app = FastAPI(lifespan=lifespan)
 

@@ -43,3 +43,19 @@ def create_access_token(user_id: int, email: str) -> str:
 
 def decode_token(token: str) -> dict:
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+
+from itsdangerous import URLSafeSerializer, BadSignature
+
+def generate_unsubscribe_token(user_id: int) -> str:
+    s = URLSafeSerializer(SECRET_KEY, salt="unsubscribe-salt")
+    return s.dumps(user_id)
+
+
+def verify_unsubscribe_token(token: str) -> int | None:
+    s = URLSafeSerializer(SECRET_KEY, salt="unsubscribe-salt")
+    try:
+        user_id = s.loads(token)
+        return int(user_id)
+    except (BadSignature, ValueError):
+        return None

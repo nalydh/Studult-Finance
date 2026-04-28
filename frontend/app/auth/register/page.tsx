@@ -86,8 +86,9 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
 
-  const canSubmit = email.trim().length > 0 && passwordValid(password);
+  const canSubmit = email.trim().length > 0 && passwordValid(password) && consentChecked;
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -98,7 +99,12 @@ export default function RegisterPage() {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: name || undefined }),
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          name: name || undefined,
+          marketing_emails_enabled: consentChecked
+        }),
       });
 
       if (!res.ok) {
@@ -223,7 +229,7 @@ export default function RegisterPage() {
             id="register-google-button"
             type="button"
             onClick={handleGoogleSignIn}
-            disabled={googleLoading || isLoading}
+            disabled={googleLoading || isLoading || !consentChecked}
             className="w-full flex items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 hover:border-zinc-300 transition-all duration-200 disabled:opacity-50"
           >
             {googleLoading ? (
@@ -309,6 +315,28 @@ export default function RegisterPage() {
                 </button>
               </div>
               <PasswordStrength password={password} />
+            </div>
+
+            {/* Consent Checkbox */}
+            <div className="flex items-start gap-3 mt-4">
+              <div className="flex items-center h-5">
+                <input
+                  id="consent"
+                  name="consent"
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/40 transition-all"
+                />
+              </div>
+              <div className="text-sm">
+                <label htmlFor="consent" className="font-medium text-zinc-700">
+                  Terms & Communication
+                </label>
+                <p className="text-zinc-500 mt-0.5">
+                  I agree to the Privacy Policy and to receive weekly check-in reminder emails.
+                </p>
+              </div>
             </div>
 
             {/* Submit */}

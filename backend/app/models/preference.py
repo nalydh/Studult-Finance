@@ -15,5 +15,6 @@ class Preference(SQLModel, table=True):
   tutorial_completed: bool = Field(default=False)
   current_streak: int = Field(default=0)
   last_submission_date: datetime | None = None
+  last_reminder_sent_date: datetime | None = None
   ai_tokens: int = Field(default=0)
   

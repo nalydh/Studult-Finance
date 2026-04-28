@@ -10,4 +10,5 @@ class User(SQLModel, table=True):
     hashed_password: Optional[str] = None 
     google_id: Optional[str] = Field(default=None) 
     email_verified: bool = Field(default=False)
+    marketing_emails_enabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -78,3 +78,34 @@ def send_password_reset_email(to: str, token: str) -> None:
     </div>
     """
     _send(to, "Reset your StuFin password", html)
+
+
+def send_weekly_reminder_email(to: str, name: str, unsubscribe_token: str) -> None:
+    link = f"{APP_URL}/dashboard"
+    unsubscribe_link = f"{APP_URL}/unsubscribe?token={unsubscribe_token}"
+    
+    html = f"""
+    <div style="font-family: 'Inter', sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #f4f4f5;">
+      <h2 style="color: #18181b; margin-bottom: 16px; font-size: 24px;">Your week is about to begin.</h2>
+      <p style="color: #71717a; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">
+        Hi {name},<br><br>
+        Your financial week starts tomorrow. Log in to StuFin to check your balances, log your latest income, and ensure your money is working for you.
+      </p>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <a href="{link}"
+           style="display: inline-block; background: #10b981; color: #ffffff; padding: 14px 32px; border-radius: 8px;
+                  text-decoration: none; font-weight: 600; font-size: 16px; transition: background 0.2s;">
+          Log In & Update Dashboard
+        </a>
+      </div>
+      <p style="color: #a1a1aa; font-size: 14px; text-align: center;">
+        Manual first. Always.
+      </p>
+      <hr style="border: none; border-top: 1px solid #f4f4f5; margin: 32px 0"/>
+      <p style="color: #a1a1aa; font-size: 12px; text-align: center;">
+        You are receiving this email because you opted into weekly reminders.<br>
+        <a href="{unsubscribe_link}" style="color: #10b981; text-decoration: underline;">Unsubscribe</a> from future reminders.
+      </p>
+    </div>
+    """
+    _send(to, "Your StuFin week starts tomorrow", html)
