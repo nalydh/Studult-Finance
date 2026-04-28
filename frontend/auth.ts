@@ -50,8 +50,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 
   callbacks: {
-    // Called after a successful Google sign-in to register/find the user in FastAPI
+    // Called after a successful Google sign-in
     async signIn({ user, account, profile }) {
+      return true;
+    },
+
+    // Persist the FastAPI user ID and access token in the JWT cookie
+    async jwt({ token, user, account, profile }) {
+      // 1. Initial sign-in for OAuth (Google)
       if (account?.provider === "google" && profile) {
         try {
           const res = await fetch(`${API_BASE}/auth/google`, {
@@ -63,23 +69,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               google_id: profile.sub,
             }),
           });
-          if (!res.ok) return false;
-          const data = await res.json();
-          user.id = String(data.id);
-          // @ts-expect-error — extending the User type
-          user.accessToken = data.access_token;
-          // @ts-expect-error
-          user.createdAt = data.created_at;
-        } catch {
-          return false;
+          if (res.ok) {
+            const data = await res.json();
+            token.userId = String(data.id);
+            token.accessToken = data.access_token;
+            token.createdAt = data.created_at;
+          }
+        } catch (error) {
+          console.error("Backend auth failed:", error);
         }
-      }
-      return true;
-    },
-
-    // Persist the FastAPI user ID and access token in the JWT cookie
-    async jwt({ token, user }) {
-      if (user) {
+      } 
+      // 2. Initial sign-in for Credentials
+      else if (user) {
         token.userId = user.id;
         // @ts-expect-error
         token.accessToken = user.accessToken;

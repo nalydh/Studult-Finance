@@ -55,7 +55,17 @@ function DashboardContent() {
   useEffect(() => {
     if (status === "authenticated") {
       authFetch("/budget/preferences")
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (!res.ok) {
+            if (res.status === 401) {
+              router.push("/login");
+              return Promise.reject("Unauthorized");
+            }
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || "Failed to fetch preferences");
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data.error === "No preferences found") {
             router.push("/welcome");
@@ -67,8 +77,11 @@ function DashboardContent() {
           }
         })
         .catch((err) => {
-          console.error(err);
-          setIsCheckingPrefs(false);
+          if (err !== "Unauthorized") {
+            console.error("Preferences fetch error:", err);
+            // Optionally set some error state here, or fallback
+            setIsCheckingPrefs(false);
+          }
         });
     } else if (status === "unauthenticated") {
       router.push("/login"); // or handle redirect
