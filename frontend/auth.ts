@@ -59,6 +59,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, account, profile }) {
       // 1. Initial sign-in for OAuth (Google)
       if (account?.provider === "google" && profile) {
+        let marketing_emails_enabled = false;
+        try {
+          const { cookies } = require("next/headers");
+          const cookieStore = cookies();
+          marketing_emails_enabled = cookieStore.get("marketing_consent")?.value === "true";
+        } catch (e) {}
+
         try {
           const res = await fetch(`${API_BASE}/auth/google`, {
             method: "POST",
@@ -67,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: profile.email,
               name: profile.name,
               google_id: profile.sub,
+              marketing_emails_enabled: marketing_emails_enabled,
             }),
           });
           if (res.ok) {

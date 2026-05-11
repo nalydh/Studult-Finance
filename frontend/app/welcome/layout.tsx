@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
-export default async function DashboardLayout({
+export default async function WelcomeLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -23,8 +23,9 @@ export default async function DashboardLayout({
 
       if (res.ok) {
         const data = await res.json();
-        if (data.error === "No preferences found") {
-          redirect("/welcome");
+        // If they already have preferences, they shouldn't be on the welcome page!
+        if (data.error !== "No preferences found") {
+          redirect("/dashboard");
         }
       }
     } catch (error) {

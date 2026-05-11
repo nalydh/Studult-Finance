@@ -135,7 +135,8 @@ export default function RegisterPage() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
+    document.cookie = `marketing_consent=${consentChecked}; path=/; max-age=3600`;
+    await signIn("google", { callbackUrl: "/welcome" });
   }
 
   return (

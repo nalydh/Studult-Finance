@@ -98,7 +98,7 @@ export default function SignInPage() {
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        window.location.href = "/dashboard";
+        window.location.href = "/welcome";
       }
     } catch {
        setError("Something went wrong. Please check your connection and try again.");
@@ -137,8 +137,10 @@ export default function SignInPage() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
-    // Page will redirect — no need to setGoogleLoading(false)
+    // On the sign-in page, there is no checkbox, so we don't opt them in by default here
+    // unless we wanted to. We'll pass false or let it default.
+    document.cookie = `marketing_consent=false; path=/; max-age=3600`;
+    await signIn("google", { callbackUrl: "/welcome" });
   }
 
   return (
