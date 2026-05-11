@@ -124,7 +124,7 @@ export default function RegisterPage() {
         // Registration succeeded but sign-in failed — send to sign-in page
         router.push("/auth/signin?registered=1");
       } else {
-        router.push("/dashboard");
+        router.push("/welcome");
       }
     } catch {
       setError("Something went wrong. Please check your connection and try again.");
