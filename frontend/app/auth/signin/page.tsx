@@ -56,6 +56,8 @@ export default function SignInPage() {
         setSuccess("Account created! Please check your email to verify your account before signing in.");
       } else if (params.get("verified") === "1") {
         setSuccess("Email verified! You can now sign in to your account.");
+      } else if (params.get("expired") === "1") {
+        setError("Your session has expired. Please sign in again.");
       }
     }
   }, []);
@@ -139,7 +141,7 @@ export default function SignInPage() {
     setGoogleLoading(true);
     // On the sign-in page, there is no checkbox, so we don't opt them in by default here
     // unless we wanted to. We'll pass false or let it default.
-    document.cookie = `marketing_consent=false; path=/; max-age=3600`;
+    document.cookie = `marketing_consent=false; path=/; max-age=3600; samesite=lax`;
     await signIn("google", { callbackUrl: "/welcome" });
   }
 

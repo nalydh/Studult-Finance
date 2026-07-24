@@ -2,47 +2,80 @@ import secrets
 import re
 from datetime import datetime, timedelta
 
+import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from sqlmodel import Session, select
-from pydantic import BaseModel
+from sqlmodel import Session, select, func
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 
 from app.database import get_session
 from app.models.user import User
 from app.models.emailtoken import EmailVerificationToken, PasswordResetToken
-from app.auth.utils import hash_password, verify_password, create_access_token
+from app.auth.utils import (
+    MAX_SESSION_AGE_DAYS,
+    create_access_token,
+    decode_token,
+    hash_password,
+    hash_token,
+    verify_google_id_token,
+    verify_password,
+)
 from app.auth.dependencies import get_current_user_id
 from app.auth.email_service import send_verification_email, send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
+_bearer = HTTPBearer(auto_error=True)
+
+# Constant-cost comparison target so login takes the same time whether or
+# not the email exists (prevents user enumeration via response timing).
+_TIMING_DUMMY_HASH = hash_password(secrets.token_urlsafe(16))
 
 
 # ── Request schemas ──────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     name: Optional[str] = None
     marketing_emails_enabled: bool = False
 
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
+
 
 class LoginRequest(BaseModel):
+    # Deliberately plain str: legacy accounts may predate format validation
+    # and must still be able to sign in.
     email: str
     password: str
 
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
+
 
 class GoogleLoginRequest(BaseModel):
-    email: str
-    name: Optional[str] = None
-    google_id: str
+    # Identity comes exclusively from the verified Google ID token —
+    # never from client-supplied email/name/google_id fields.
+    id_token: str
     marketing_emails_enabled: bool = False
 
 
 class ForgotPasswordRequest(BaseModel):
     email: str
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class ResetPasswordRequest(BaseModel):
@@ -64,12 +97,22 @@ def user_response(user: User) -> dict:
     }
 
 
+def _get_user_by_email(session: Session, email: str) -> Optional[User]:
+    """Case-insensitive email lookup (covers legacy mixed-case rows)."""
+    return session.exec(
+        select(User).where(func.lower(User.email) == email.strip().lower())
+    ).first()
+
+
 def _create_verification_token(user_id: int, session: Session) -> str:
-    """Generate and persist an email verification token (24 h TTL)."""
+    """
+    Generate an email verification token (24 h TTL). Only its SHA-256 hash
+    is persisted; the raw token goes into the emailed link and is returned.
+    """
     token = secrets.token_urlsafe(32)
     db_token = EmailVerificationToken(
         user_id=user_id,
-        token=token,
+        token=hash_token(token),
         expires_at=datetime.utcnow() + timedelta(hours=24),
     )
     session.add(db_token)
@@ -78,16 +121,31 @@ def _create_verification_token(user_id: int, session: Session) -> str:
 
 
 def _create_reset_token(user_id: int, session: Session) -> str:
-    """Generate and persist a password reset token (1 h TTL)."""
+    """
+    Generate a password reset token (15 min TTL). Only its SHA-256 hash
+    is persisted; the raw token goes into the emailed link and is returned.
+    """
     token = secrets.token_urlsafe(32)
     db_token = PasswordResetToken(
         user_id=user_id,
-        token=token,
+        token=hash_token(token),
         expires_at=datetime.utcnow() + timedelta(minutes=15),
     )
     session.add(db_token)
     session.commit()
     return token
+
+
+def _find_email_token(model, raw_token: str, session: Session):
+    """
+    Look up a verification/reset token row by the hash of the presented token.
+    Falls back to a plaintext match so links emailed before hashing shipped
+    keep working until they expire (≤ 24 h) — safe to remove after that.
+    """
+    row = session.exec(select(model).where(model.token == hash_token(raw_token))).first()
+    if not row:
+        row = session.exec(select(model).where(model.token == raw_token)).first()
+    return row
 
 
 def _validate_password(password: str) -> str | None:
@@ -109,9 +167,10 @@ def _validate_password(password: str) -> str | None:
 # ── Endpoints ────────────────────────────────────────────────────
 
 @router.post("/register")
-def register(req: RegisterRequest, session: Session = Depends(get_session)):
+@limiter.limit("5/minute")
+def register(request: Request, req: RegisterRequest, session: Session = Depends(get_session)):
     """Create a new email/password account and send a verification email."""
-    existing = session.exec(select(User).where(User.email == req.email)).first()
+    existing = _get_user_by_email(session, req.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -130,19 +189,27 @@ def register(req: RegisterRequest, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(user)
 
-    # Send verification email (non-blocking — errors are logged, not raised)
     token = _create_verification_token(user.id, session)
     send_verification_email(user.email, token)
 
-    return user_response(user)
+    # No access token here: the account can't sign in until the email is
+    # verified, so registration must not hand out API credentials.
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "email_verified": user.email_verified,
+        "created_at": user.created_at.isoformat(),
+    }
 
 
 @router.post("/login")
 @limiter.limit("10/minute")
 def login(request: Request, req: LoginRequest, session: Session = Depends(get_session)):
     """Sign in with email + password. Rate-limited to 10 attempts/minute per IP."""
-    user = session.exec(select(User).where(User.email == req.email)).first()
+    user = _get_user_by_email(session, req.email)
     if not user or not user.hashed_password:
+        verify_password(req.password, _TIMING_DUMMY_HASH)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -154,25 +221,46 @@ def login(request: Request, req: LoginRequest, session: Session = Depends(get_se
 @router.post("/google")
 def google_signin(req: GoogleLoginRequest, session: Session = Depends(get_session)):
     """
-    Called by NextAuth after a successful Google OAuth flow.
-    Finds or creates the user, linking Google ID to existing email accounts.
-    Google-authenticated users are considered verified.
+    Called by the NextAuth server after a successful Google OAuth flow.
+    The Google-signed ID token is verified here (signature, audience,
+    issuer, expiry); its claims are the only trusted source of identity.
     """
-    user = session.exec(select(User).where(User.google_id == req.google_id)).first()
+    try:
+        claims = verify_google_id_token(req.id_token)
+    except RuntimeError:
+        raise HTTPException(status_code=500, detail="Google sign-in is not configured on the server")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+    except http_requests.RequestException:
+        raise HTTPException(status_code=503, detail="Could not verify Google credential. Please try again.")
+
+    google_id = claims["sub"]
+    email = (claims.get("email") or "").strip().lower()
+    name = claims.get("name")
+    email_is_verified = claims.get("email_verified") in (True, "true")
+
+    if not email:
+        raise HTTPException(status_code=401, detail="Google account has no email address")
+
+    user = session.exec(select(User).where(User.google_id == google_id)).first()
 
     if not user:
-        user = session.exec(select(User).where(User.email == req.email)).first()
+        user = _get_user_by_email(session, email)
         if user:
-            user.google_id = req.google_id
+            # Linking to an existing account requires Google to attest the
+            # email is verified — otherwise this is an account-takeover vector.
+            if not email_is_verified:
+                raise HTTPException(status_code=403, detail="Google account email is not verified")
+            user.google_id = google_id
             if not user.name:
-                user.name = req.name
-            user.email_verified = True  # Google verifies emails
+                user.name = name
+            user.email_verified = True
         else:
             user = User(
-                email=req.email,
-                name=req.name,
-                google_id=req.google_id,
-                email_verified=True,
+                email=email,
+                name=name,
+                google_id=google_id,
+                email_verified=email_is_verified,
                 marketing_emails_enabled=req.marketing_emails_enabled,
             )
             session.add(user)
@@ -182,23 +270,57 @@ def google_signin(req: GoogleLoginRequest, session: Session = Depends(get_sessio
     return user_response(user)
 
 
+@router.post("/refresh")
+def refresh(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    session: Session = Depends(get_session),
+):
+    """
+    Exchange a valid (unexpired) access token for a fresh one.
+    The original sign-in time is preserved, capping total session
+    lifetime at MAX_SESSION_AGE_DAYS before re-authentication is required.
+    """
+    try:
+        payload = decode_token(credentials.credentials)
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
+
+    auth_time = payload.get("auth_time")
+    if not isinstance(auth_time, int) or (
+        datetime.utcnow() - datetime.utcfromtimestamp(auth_time)
+        > timedelta(days=MAX_SESSION_AGE_DAYS)
+    ):
+        raise HTTPException(status_code=401, detail="Session has expired. Please sign in again.")
+
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    return {"access_token": create_access_token(user.id, user.email, auth_time=auth_time)}
+
+
 @router.get("/verify-email")
 def verify_email(token: str, session: Session = Depends(get_session)):
     """Confirm ownership of an email address via the link sent after registration."""
-    db_token = session.exec(
-        select(EmailVerificationToken).where(EmailVerificationToken.token == token)
-    ).first()
+    db_token = _find_email_token(EmailVerificationToken, token, session)
 
     if not db_token:
         raise HTTPException(status_code=400, detail="Invalid verification link")
-    if db_token.used:
-        raise HTTPException(status_code=400, detail="This link has already been used")
-    if db_token.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Verification link has expired")
 
     user = session.get(User, db_token.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Invalid verification link")
+
+    # Idempotent: re-visiting a link (page refresh, double request) after the
+    # email is already verified should not surface an error.
+    if user.email_verified:
+        return {"message": "Email verified successfully"}
+
+    if db_token.used:
+        raise HTTPException(status_code=400, detail="This link has already been used")
+    if db_token.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Verification link has expired")
 
     user.email_verified = True
     db_token.used = True
@@ -213,26 +335,26 @@ def resend_verification(
     req: ForgotPasswordRequest,
     session: Session = Depends(get_session),
 ):
-    """Resend the email verification link."""
-    user = session.exec(select(User).where(User.email == req.email)).first()
-    if not user:
-        return {"message": "If that account exists, a new verification link has been sent."}
-    if user.email_verified:
-        return {"message": "Email already verified"}
+    """Resend the email verification link. Response never reveals whether the account exists."""
+    generic = {"message": "If that account exists, a new verification link has been sent."}
 
-    # Enforce a strict 30-second cooldown per user
+    user = _get_user_by_email(session, req.email)
+    if not user or user.email_verified:
+        return generic
+
+    # Strict 30-second per-user cooldown — skipped silently so the response
+    # doesn't leak that the account exists.
     last_token = session.exec(
         select(EmailVerificationToken)
         .where(EmailVerificationToken.user_id == user.id)
         .order_by(EmailVerificationToken.created_at.desc())
     ).first()
-
     if last_token and (datetime.utcnow() - last_token.created_at).total_seconds() < 30:
-        raise HTTPException(status_code=429, detail="Please wait at least 30 seconds before requesting a new link.")
+        return generic
 
     token = _create_verification_token(user.id, session)
     send_verification_email(user.email, token)
-    return {"message": "If that account exists, a new verification link has been sent."}
+    return generic
 
 
 @router.post("/forgot-password")
@@ -243,34 +365,33 @@ def forgot_password(
     session: Session = Depends(get_session),
 ):
     """
-    Send a password reset link. Always returns 200 to avoid user enumeration.
+    Send a password reset link. Always returns the same 200 response so the
+    endpoint can't be used to probe which emails are registered.
     """
-    user = session.exec(select(User).where(User.email == req.email)).first()
+    user = _get_user_by_email(session, req.email)
     if user and user.hashed_password:  # Only email/password accounts can reset
-        # Enforce a strict 30-second cooldown per user
+        # Strict 30-second per-user cooldown — skipped silently (a 429 here
+        # would reveal that the account exists).
         last_token = session.exec(
             select(PasswordResetToken)
             .where(PasswordResetToken.user_id == user.id)
             .order_by(PasswordResetToken.created_at.desc())
         ).first()
-
-        if last_token and (datetime.utcnow() - last_token.created_at).total_seconds() < 30:
-            raise HTTPException(status_code=429, detail="Please wait at least 30 seconds before requesting a new link.")
-
-        token = _create_reset_token(user.id, session)
-        send_password_reset_email(user.email, token)
+        if not (last_token and (datetime.utcnow() - last_token.created_at).total_seconds() < 30):
+            token = _create_reset_token(user.id, session)
+            send_password_reset_email(user.email, token)
     return {"message": "If that email is registered, a reset link has been sent"}
 
 
 @router.post("/reset-password")
-def reset_password(req: ResetPasswordRequest, session: Session = Depends(get_session)):
+@limiter.limit("5/minute")
+def reset_password(request: Request, req: ResetPasswordRequest, session: Session = Depends(get_session)):
     """Set a new password using a valid reset token."""
-    if len(req.new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    error = _validate_password(req.new_password)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
-    db_token = session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.token == req.token)
-    ).first()
+    db_token = _find_email_token(PasswordResetToken, req.token, session)
 
     if not db_token:
         raise HTTPException(status_code=400, detail="Invalid reset link")
@@ -284,7 +405,20 @@ def reset_password(req: ResetPasswordRequest, session: Session = Depends(get_ses
         raise HTTPException(status_code=404, detail="Invalid reset link")
 
     user.hashed_password = hash_password(req.new_password)
+    # Completing a reset proves control of the email inbox.
+    user.email_verified = True
     db_token.used = True
+
+    # Invalidate every other outstanding reset token for this user.
+    other_tokens = session.exec(
+        select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used == False,  # noqa: E712
+        )
+    ).all()
+    for t in other_tokens:
+        t.used = True
+
     session.commit()
     return {"message": "Password updated successfully"}
 
@@ -294,14 +428,14 @@ def unsubscribe(token: str, session: Session = Depends(get_session)):
     """Unsubscribe from marketing/reminder emails using a secure token."""
     from app.auth.utils import verify_unsubscribe_token
     user_id = verify_unsubscribe_token(token)
-    
+
     if not user_id:
         raise HTTPException(status_code=400, detail="Invalid or expired unsubscribe link")
-        
+
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
+
     user.marketing_emails_enabled = False
     session.commit()
     return {"message": "Successfully unsubscribed from weekly reminders."}

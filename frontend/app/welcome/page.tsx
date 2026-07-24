@@ -117,7 +117,11 @@ export default function WelcomePage() {
       router.push("/dashboard");
     } catch (error) {
       console.error("POST ERROR:", error);
-      setApiError("A network error occurred. Please try again.");
+      if (error instanceof Error && error.message === "Not authenticated") {
+        setApiError("Your session is still loading. Please wait a moment and try again.");
+      } else {
+        setApiError("A network error occurred. Please try again.");
+      }
       setIsSubmitting(false);
     }
   }

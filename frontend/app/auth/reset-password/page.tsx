@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Loader2, CheckCircle2, Eye, EyeOff, XCircle } from "lucide-react";
+import { PasswordStrength, passwordValid } from "@/components/PasswordStrength";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -24,8 +25,8 @@ function ResetPasswordForm() {
   }, [token]);
 
   const mismatch = confirm.length > 0 && password !== confirm;
-  const tooShort = password.length > 0 && password.length < 8;
-  const canSubmit = token && password.length >= 8 && password === confirm;
+  const tooWeak = password.length > 0 && !passwordValid(password);
+  const canSubmit = token && passwordValid(password) && password === confirm;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -103,7 +104,7 @@ function ResetPasswordForm() {
                   Set a new password
                 </h2>
                 <p className="mt-1.5 text-sm text-zinc-500">
-                  Must be at least 8 characters.
+                  At least 8 characters, with an uppercase letter and a number.
                 </p>
               </div>
 
@@ -131,7 +132,7 @@ function ResetPasswordForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className={`w-full rounded-xl border px-4 py-2.5 pr-11 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition-all ${
-                        tooShort
+                        tooWeak
                           ? "border-red-300 focus:ring-red-400/30"
                           : "border-zinc-200 focus:ring-emerald-500/40 focus:border-emerald-400"
                       }`}
@@ -144,7 +145,7 @@ function ResetPasswordForm() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {tooShort && <p className="mt-1 text-xs text-red-500">Must be at least 8 characters</p>}
+                  <PasswordStrength password={password} />
                 </div>
 
                 {/* Confirm */}

@@ -8,14 +8,12 @@ export default async function WelcomeLayout({
 }) {
   const session = await auth();
 
-  // @ts-expect-error - accessToken is added to session in auth.ts
   if (session && session.accessToken) {
     try {
       // Use 127.0.0.1 for server-side fetches to prevent Node.js IPv6 resolution issues
       const apiUrl = (process.env.NEXT_PUBLIC_API_BASE || "").replace("localhost", "127.0.0.1");
       const res = await fetch(`${apiUrl}/budget/preferences`, {
         headers: {
-          // @ts-expect-error
           Authorization: `Bearer ${session.accessToken}`,
         },
         cache: "no-store",

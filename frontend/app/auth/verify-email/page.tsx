@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
@@ -12,6 +12,7 @@ function VerifyEmailContent() {
   const token = params.get("token") ?? "";
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
+  const requested = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -19,6 +20,11 @@ function VerifyEmailContent() {
       setMessage("Missing verification token. Please use the link from your email.");
       return;
     }
+
+    // React StrictMode mounts effects twice in dev; without this guard the
+    // second request hits an already-used token and reports a false failure.
+    if (requested.current) return;
+    requested.current = true;
 
     async function verify() {
       try {

@@ -24,7 +24,6 @@ export default function Navbar() {
   // Fetch streak when authenticated (requires Bearer token)
   useEffect(() => {
     if (!isAuthenticated || !session) return;
-    // @ts-expect-error — accessToken added in auth.ts callbacks
     const token: string | undefined = session.accessToken;
     if (!token) return;
 
