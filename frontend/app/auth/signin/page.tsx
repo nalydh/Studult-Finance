@@ -202,7 +202,7 @@ export default function SignInPage() {
       {/* ─── Right panel — form ──────────────────────────────── */}
       <div className="relative flex flex-1 flex-col justify-center px-6 py-12 lg:px-16 bg-white">
 
-        {/* Back to home — desktop, top-left of white panel */}
+        {/* Back to home — top-left of white panel (all screen sizes) */}
         <div className="absolute top-6 left-6">
           <Link
             href="/"
@@ -210,17 +210,6 @@ export default function SignInPage() {
           >
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             Back to home
-          </Link>
-        </div>
-
-        {/* Back to home — top-left corner */}
-        <div className="absolute top-6 left-6 lg:hidden">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 transition-colors group"
-          >
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-            Home
           </Link>
         </div>
 

@@ -33,6 +33,11 @@ package-lock.json
 **/__pycache__/
 **/*.py[cod]
 
+# Local dev databases — never commit (binary churn + contains account rows)
+*.db
+*.sqlite
+*.sqlite3
+
 # ──────────────
 # Testing
 # ──────────────

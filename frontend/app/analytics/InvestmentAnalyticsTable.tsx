@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { money } from "@/lib/utils";
 import { createPortal } from "react-dom";
 import { X, TrendingUp, Package, Trash2 } from "lucide-react";
 import {
@@ -56,7 +57,7 @@ const TICK = { fill: "#64748b", fontSize: 11 };
 const MARGIN = { top: 12, right: 20, left: 0, bottom: 28 };
 
 function fmt(n: number) {
-  return n.toLocaleString("en-AU", { minimumFractionDigits: 2 });
+  return money(n);
 }
 
 /* ══════════════════════════════════════════════════════════════════

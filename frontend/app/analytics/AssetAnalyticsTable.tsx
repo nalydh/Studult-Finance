@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { money } from "@/lib/utils";
 import { X, TrendingUp, TrendingDown, Package, Calendar, DollarSign } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -97,13 +98,13 @@ function AssetCategoryModal({
           <div>
             <p className="text-[11px] text-slate-400 uppercase tracking-wider">Total Cost</p>
             <p className="text-xl font-bold text-slate-900 mt-0.5">
-              ${group.totalCost.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+              ${money(group.totalCost)}
             </p>
           </div>
           <div>
             <p className="text-[11px] text-slate-400 uppercase tracking-wider">Current Value</p>
             <p className="text-xl font-bold text-slate-900 mt-0.5">
-              ${group.totalValue.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+              ${money(group.totalValue)}
             </p>
           </div>
           <div>
@@ -113,7 +114,7 @@ function AssetCategoryModal({
                 ? <TrendingUp className="w-4 h-4 text-emerald-500" />
                 : <TrendingDown className="w-4 h-4 text-red-500" />}
               <p className={`text-xl font-bold ${isGain ? "text-emerald-600" : "text-red-600"}`}>
-                {isGain ? "+" : ""}${Math.abs(group.totalReturn).toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                {isGain ? "+" : ""}${money(Math.abs(group.totalReturn))}
               </p>
               <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${isGain ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
                 {isGain ? "+" : ""}{group.returnPct.toFixed(1)}%
@@ -144,7 +145,7 @@ function AssetCategoryModal({
                   tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} />
                 <Tooltip
                   formatter={(v: number, name: string) => [
-                    `$${v.toLocaleString("en-AU", { minimumFractionDigits: 2 })}`,
+                    `$${money(v)}`,
                     name === "cumulativeValue" ? "Market Value" : "Total Cost",
                   ]}
                   contentStyle={TIP_STYLE}
@@ -180,13 +181,13 @@ function AssetCategoryModal({
                     <tr key={a.id} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-2.5 font-medium text-slate-800">{a.name}</td>
                       <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums">
-                        ${a.purchase_price.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                        ${money(a.purchase_price)}
                       </td>
                       <td className="px-4 py-2.5 text-right text-slate-800 font-medium tabular-nums">
-                        ${mv.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                        ${money(mv)}
                       </td>
                       <td className={`px-4 py-2.5 text-right tabular-nums font-medium ${pos ? "text-emerald-600" : "text-red-600"}`}>
-                        {pos ? "+" : ""}${Math.abs(ret).toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                        {pos ? "+" : ""}${money(Math.abs(ret))}
                       </td>
                       <td className={`px-4 py-2.5 text-right tabular-nums text-xs ${pos ? "text-emerald-600" : "text-red-600"}`}>
                         {pos ? "+" : ""}{roi.toFixed(1)}%
@@ -263,7 +264,7 @@ export function AssetAnalyticsTable() {
           <div className="text-right">
             <p className="text-xs text-slate-400">Total Return</p>
             <p className={`text-sm font-bold ${grandReturn >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {grandReturn >= 0 ? "+" : ""}${Math.abs(grandReturn).toLocaleString("en-AU", { minimumFractionDigits: 2 })} ({grandROI.toFixed(1)}%)
+              {grandReturn >= 0 ? "+" : ""}${money(Math.abs(grandReturn))} ({grandROI.toFixed(1)}%)
             </p>
           </div>
         </div>
@@ -297,15 +298,15 @@ export function AssetAnalyticsTable() {
                   </td>
                   <td className="px-4 py-3 text-right text-slate-500">{g.assets.length}</td>
                   <td className="px-4 py-3 text-right text-slate-600 tabular-nums">
-                    ${g.totalCost.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                    ${money(g.totalCost)}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-800 font-medium tabular-nums">
-                    ${g.totalValue.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                    ${money(g.totalValue)}
                   </td>
                   <td className="px-5 py-3 text-right tabular-nums">
                     <div className="flex items-center justify-end gap-1.5">
                       <span className={`font-medium ${pos ? "text-emerald-600" : "text-red-600"}`}>
-                        {pos ? "+" : ""}${Math.abs(g.totalReturn).toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                        {pos ? "+" : ""}${money(Math.abs(g.totalReturn))}
                       </span>
                       <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${pos ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
                         {pos ? "+" : ""}{g.returnPct.toFixed(1)}%
@@ -322,14 +323,14 @@ export function AssetAnalyticsTable() {
               <td className="px-5 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</td>
               <td className="px-4 py-2.5 text-right text-sm text-slate-500">{assets.length}</td>
               <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-700 tabular-nums">
-                ${grandTotalCost.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                ${money(grandTotalCost)}
               </td>
               <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-900 tabular-nums">
-                ${grandTotalValue.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                ${money(grandTotalValue)}
               </td>
               <td className="px-5 py-2.5 text-right">
                 <span className={`text-sm font-bold ${grandReturn >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                  {grandReturn >= 0 ? "+" : ""}${Math.abs(grandReturn).toLocaleString("en-AU", { minimumFractionDigits: 2 })}
+                  {grandReturn >= 0 ? "+" : ""}${money(Math.abs(grandReturn))}
                 </span>
               </td>
             </tr>

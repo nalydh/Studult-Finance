@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -9,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, Package, Pencil, Trash2, Settings, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import {
   type CategoryItem, type Asset, MAX_CATEGORY_TABS, COLOR_PALETTE, getCategoryColor,
 } from "./types";
@@ -148,7 +149,11 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed to add asset");
+    if (!res.ok) {
+      toast.error("Couldn't add the asset. Please try again.");
+      throw new Error("Failed to add asset");
+    }
+    toast.success(`Asset "${data.name}" added`);
     setAddOpen(false);
     fetchAssets();
   }
@@ -160,7 +165,11 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
       method: "PUT",
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed to update asset");
+    if (!res.ok) {
+      toast.error("Couldn't save the asset changes. Please try again.");
+      throw new Error("Failed to update asset");
+    }
+    toast.success(`Asset "${data.name}" updated`);
     setEditOpen(false);
     setEditingAsset(null);
     fetchAssets();
@@ -168,7 +177,11 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
 
   async function handleDeleteAsset(id: number) {
     const res = await authFetch(`/assets/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete asset");
+    if (!res.ok) {
+      toast.error("Couldn't delete the asset. Please try again.");
+      throw new Error("Failed to delete asset");
+    }
+    toast.success("Asset deleted");
     setDeleteOpen(false);
     setDeletingAsset(null);
     setSelectedIds((prev) => {
@@ -186,7 +199,11 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
       `/assets/${assetId}/sell?sale_price=${salePrice}&destination_wallet=${wallet}&date_sold=${dateSold}`,
       { method: "PUT" },
     );
-    if (!res.ok) throw new Error("Failed to sell asset");
+    if (!res.ok) {
+      toast.error("Couldn't record the sale. Please try again.");
+      throw new Error("Failed to sell asset");
+    }
+    toast.success(`Asset sold for $${money(salePrice)} → ${wallet}`);
     setSellOpen(false);
     setSellingAsset(null);
     fetchAssets();
@@ -201,7 +218,13 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
         { method: "PUT" },
       )
     );
-    await Promise.all(promises);
+    const results = await Promise.all(promises);
+    const failed = results.filter((r) => !r.ok).length;
+    if (failed > 0) {
+      toast.error(`${failed} of ${sales.length} sales failed. Please check and retry.`);
+    } else {
+      toast.success(`${sales.length} asset${sales.length === 1 ? "" : "s"} sold → ${wallet}`);
+    }
     setBulkSellOpen(false);
     setSelectedIds(new Set());
     fetchAssets();
@@ -269,7 +292,7 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             <span>{`${activeAssets.length}/${MAX_ASSETS} assets`}</span>
             <span className="h-1 w-1 rounded-full bg-muted-foreground/40 inline-block" />
-            <span>${filteredValue.toLocaleString("en-US", { minimumFractionDigits: 2 })} {selectedTab === "All" ? "total value" : `in ${selectedTab}`}</span>
+            <span>${money(filteredValue)} {selectedTab === "All" ? "total value" : `in ${selectedTab}`}</span>
           </p>
         </div>
 
@@ -407,11 +430,11 @@ export default function AssetLedger({ onReady }: { onReady?: () => void }) {
                       </span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      ${money(asset.purchase_price)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {asset.market_value != null
-                        ? `$${asset.market_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                        ? `$${money(asset.market_value)}`
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">

@@ -32,7 +32,12 @@ def create_db_and_tables():
 async def lifespan(app: FastAPI):
     print("Startup: Creating database tables...")
     create_db_and_tables()
-    
+
+    # create_all() adds missing TABLES but never missing COLUMNS, so schema
+    # changes to existing tables arrive through backend/migrations/*.sql.
+    from app.migrations_runner import run_migrations
+    run_migrations()
+
     from app.scheduler import start_scheduler, stop_scheduler
     start_scheduler()
     

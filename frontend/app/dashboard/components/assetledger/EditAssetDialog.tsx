@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon, TrendingUp, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import { COLOR_PALETTE, type CategoryItem, type Asset } from "./types";
 
 interface EditAssetDialogProps {
@@ -190,7 +190,7 @@ export function EditAssetDialog({ open, onOpenChange, asset, categories, onSubmi
                     isUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
                     {isUp ? "+" : ""}
-                    ${diff.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    ${money(diff)}
                     {" "}({purchaseVal > 0 ? (isUp ? "+" : "") + ((diff / purchaseVal) * 100).toFixed(1) : "0"}%) from purchase
                   </p>
                 )}

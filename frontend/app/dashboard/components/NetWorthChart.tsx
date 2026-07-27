@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { money } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,7 +116,7 @@ export function NetWorthChart() {
       tooltip: {
         callbacks: {
           label: (ctx: { parsed: { y: number } }) =>
-            `Net Worth: $${ctx.parsed.y.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            `Net Worth: $${money(ctx.parsed.y)}`,
         },
       },
     },

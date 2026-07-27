@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
+from typing import Optional
+from pydantic import BaseModel
 from sqlmodel import Session, select, func
 from app.database import get_session
 from app.models.snapshot import NetWorthSnapshot
@@ -9,6 +11,13 @@ from app.models.asset import Asset
 from app.auth.dependencies import get_current_user_id
 
 router = APIRouter(prefix="/snapshots", tags=["snapshots"])
+
+NOTE_MAX_LENGTH = 280
+
+
+class SnapshotCreate(BaseModel):
+    """Optional body for the monthly check-in — currently just the user's note."""
+    note: Optional[str] = None
 
 
 @router.get("/streak")
@@ -31,10 +40,17 @@ def get_streak(
 
 @router.post("/")
 def create_snapshot(
+    data: Optional[SnapshotCreate] = None,
     user_id: int = Depends(get_current_user_id),
     session: Session = Depends(get_session),
 ):
     try:
+        note = (data.note or "").strip() if data else ""
+        if len(note) > NOTE_MAX_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Note cannot exceed {NOTE_MAX_LENGTH} characters.",
+            )
         now = datetime.now()
         start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -81,6 +97,7 @@ def create_snapshot(
             total_liabilities=total_liabilities,
             total_assets=total_assets,
             net_worth=net_worth,
+            note=note or None,
         )
 
         session.add(snapshot)

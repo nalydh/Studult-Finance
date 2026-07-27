@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { money } from "@/lib/utils";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Sparkles, Lock, Send, TrendingUp, PiggyBank, ShoppingCart, ChevronRight, Info, ChevronLeft, Loader2, HelpCircle } from "lucide-react";
@@ -31,11 +32,21 @@ const TIP_STYLE     = { borderRadius: "8px", border: "none", boxShadow: "0 4px 1
 const AI_PROMPTS = [
   { icon: <TrendingUp className="w-3.5 h-3.5" />, text: "How is my net worth trending?" },
   { icon: <PiggyBank className="w-3.5 h-3.5" />,  text: "Am I saving enough each month?" },
-  { icon: <ShoppingCart className="w-3.5 h-3.5" />, text: "Where am I overspending?" },
+  { icon: <ShoppingCart className="w-3.5 h-3.5" />, text: "Is my savings rate improving?" },
 ];
 
+interface SpendingPeriod {
+  month:             string;
+  income:            number;
+  estimatedSpending: number;
+  investmentGrowth:  number;
+  netWorthChange:    number;
+  savingsRate:       number | null;
+}
+
 interface AnalyticsData {
-  netWorthData:         { month: string; value: number; isLive?: boolean }[];
+  netWorthData:         { month: string; value: number; isLive?: boolean; note?: string | null }[];
+  spendingData:         SpendingPeriod[];
   assetAllocationData:  { month: string; cash: number; investments: number; physical: number; isLive?: boolean }[];
   allocationTrendsData: { label: string; saved: number; needs: number; wants: number }[];
   incomeLog:            { id: number; date: string; source: string; strategy: string; amount: number; needs: number; wants: number; savings: number }[];
@@ -57,6 +68,23 @@ function FadeCard({
       style={{ animationDelay: `${delay}ms` }}
     >
       {children}
+    </div>
+  );
+}
+
+/* ── Net worth tooltip — surfaces the note captured at check-in ── */
+function NetWorthTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const note = payload[0]?.payload?.note;
+  return (
+    <div className="rounded-lg bg-white shadow-lg border border-slate-200 px-3 py-2 max-w-[230px]">
+      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-semibold text-slate-900">${money(payload[0].value)}</p>
+      {note && (
+        <p className="mt-1.5 pt-1.5 border-t border-slate-100 text-xs text-slate-600 leading-snug">
+          “{note}”
+        </p>
+      )}
     </div>
   );
 }
@@ -183,6 +211,11 @@ export default function AnalyticsPage() {
     { key: "physical",   label: "Physical Assets",  color: C.physical },
   ];
 
+  // Most recent completed period of derived spending (needs two snapshots)
+  const latestSpending = data.spendingData?.length
+    ? data.spendingData[data.spendingData.length - 1]
+    : null;
+
   // Does the breakdown have a live "Now" point?
   const hasLiveBreakdown = data.assetAllocationData?.slice(-1)[0]?.isLive ?? false;
 
@@ -240,10 +273,10 @@ export default function AnalyticsPage() {
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Net Worth</p>
                   {latestNW !== null ? (
                     <div className="mt-1">
-                      <span className="text-3xl font-bold text-slate-900">${latestNW.toLocaleString()}</span>
+                      <span className="text-3xl font-bold text-slate-900">${money(latestNW)}</span>
                       {nwChange && (
                         <span className={`ml-2 text-sm font-medium ${nwChange.diff >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                          {nwChange.diff >= 0 ? "+" : ""}${Math.abs(nwChange.diff).toLocaleString()} ({nwChange.diff >= 0 ? "+" : ""}{nwChange.pct.toFixed(1)}%)
+                          {nwChange.diff >= 0 ? "+" : ""}${money(Math.abs(nwChange.diff))} ({nwChange.diff >= 0 ? "+" : ""}{nwChange.pct.toFixed(1)}%)
                         </span>
                       )}
                     </div>
@@ -299,7 +332,7 @@ export default function AnalyticsPage() {
                         domain={niceNWDomain(filteredNW.map(d => d.value))}
                         tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
                       />
-                      <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, "Net Worth"]} contentStyle={TIP_STYLE} />
+                      <Tooltip content={<NetWorthTooltip />} />
                       <Area type="monotone" dataKey="value" stroke={C.netWorth} strokeWidth={2.5} fill="url(#gNW)" />
                     </AreaChart>
                   ) : (
@@ -343,9 +376,13 @@ export default function AnalyticsPage() {
                       <XAxis dataKey="month" axisLine={false} tickLine={false} tick={TICK} dy={14} minTickGap={10} />
                       <YAxis axisLine={false} tickLine={false} tick={TICK} tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`} />
                       <Tooltip
+                        // Recharts' default bar cursor is a solid grey block over the
+                        // whole hovered band — with few data points that's the entire
+                        // chart. The tooltip already names the column it's reading.
+                        cursor={false}
                         formatter={(v: number, name: string) => {
                           const lm: Record<string, string> = { cash: "Cash Accounts", investments: "Investment Accounts", physical: "Physical Assets" };
-                          return [`$${v.toLocaleString()}`, lm[name] || name];
+                          return [`$${money(v)}`, lm[name] || name];
                         }}
                         contentStyle={TIP_STYLE}
                       />
@@ -394,7 +431,7 @@ export default function AnalyticsPage() {
                         <Tooltip
                           formatter={(v: number, name: string) => {
                             const lm: Record<string, string> = { needs: "Needs", wants: "Wants", saved: "Savings" };
-                            return [`$${v.toLocaleString()}`, lm[name] || name];
+                            return [`$${money(v)}`, lm[name] || name];
                           }}
                           contentStyle={TIP_STYLE}
                         />
@@ -416,6 +453,47 @@ export default function AnalyticsPage() {
           </div>
 
         </div>
+
+        {/* ── Where it went — derived, never entered ── */}
+        {latestSpending && (
+          <FadeCard delay={350}>
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="flex items-start justify-between px-5 py-3.5 border-b border-slate-100">
+                <div>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Where It Went</p>
+                  <p className="text-sm text-slate-500 mt-0.5">{latestSpending.month} — worked out from your check-ins, nothing to enter</p>
+                </div>
+                <InfoTooltip
+                  title="How this is worked out"
+                  lines={[
+                    { color: "#10b981", label: "Earned",  desc: "Total income you logged in this period" },
+                    { color: "#f59e0b", label: "Spent",   desc: "Income that did not end up as net worth" },
+                    { color: "#0ea5e9", label: "Kept",    desc: "Share of income still yours at month end" },
+                    { color: "#94a3b8", label: "Estimate", desc: "Market movement is excluded; a revalued asset can still skew it" },
+                  ]}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+                <div className="px-5 py-4">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Earned</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">${money(latestSpending.income)}</p>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Spent (est.)</p>
+                  <p className="text-2xl font-bold text-amber-600 mt-1">
+                    {latestSpending.estimatedSpending >= 0 ? `$${money(latestSpending.estimatedSpending)}` : "—"}
+                  </p>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Kept</p>
+                  <p className={`text-2xl font-bold mt-1 ${(latestSpending.savingsRate ?? 0) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    {latestSpending.savingsRate !== null ? `${latestSpending.savingsRate.toFixed(0)}%` : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </FadeCard>
+        )}
 
         {/* ── Income Log — connected beneath Weekly Allocation ── */}
         <FadeCard delay={400}>
@@ -460,10 +538,10 @@ export default function AnalyticsPage() {
                           <td className="px-4 py-2.5">
                             <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">{row.strategy}</span>
                           </td>
-                          <td className="px-4 py-2.5 text-right font-semibold text-slate-900">${row.amount.toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-right text-xs" style={{ color: C.needs }}>${row.needs.toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-right text-xs" style={{ color: C.wants }}>${row.wants.toLocaleString()}</td>
-                          <td className="px-5 py-2.5 text-right text-xs font-medium" style={{ color: C.savings }}>${row.savings.toLocaleString()}</td>
+                          <td className="px-4 py-2.5 text-right font-semibold text-slate-900">${money(row.amount)}</td>
+                          <td className="px-4 py-2.5 text-right text-xs" style={{ color: C.needs }}>${money(row.needs)}</td>
+                          <td className="px-4 py-2.5 text-right text-xs" style={{ color: C.wants }}>${money(row.wants)}</td>
+                          <td className="px-5 py-2.5 text-right text-xs font-medium" style={{ color: C.savings }}>${money(row.savings)}</td>
                         </tr>
                       ))}
                     </tbody>

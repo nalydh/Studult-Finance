@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import { getCategoryColor, type CategoryItem, type Asset } from "./types";
 
 interface BulkSellDialogProps {
@@ -90,9 +90,9 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                       </span>
                     </div>
                     <div className="text-right text-xs text-muted-foreground space-y-0.5">
-                      <div>Paid ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+                      <div>Paid ${money(asset.purchase_price)}</div>
                       {asset.market_value != null && (
-                        <div>Market ${asset.market_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+                        <div>Market ${money(asset.market_value)}</div>
                       )}
                     </div>
                   </div>
@@ -122,7 +122,7 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                           "font-medium",
                           isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                         )}>
-                          {isProfit ? "+" : ""}${pl.toLocaleString("en-US", { minimumFractionDigits: 2 })} {isProfit ? "Profit" : "Loss"}
+                          {isProfit ? "+" : ""}${money(pl)} {isProfit ? "Profit" : "Loss"}
                         </span>
                       </div>
                     );
@@ -186,7 +186,7 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Sale Value</span>
                   <span className="font-medium">
-                    ${totalSale.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    ${money(totalSale)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -201,7 +201,7 @@ export function BulkSellDialog({ open, onOpenChange, assets, categories, onSubmi
                     "font-semibold",
                     isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
-                    {isProfit ? "+" : ""}${totalPL.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {isProfit ? "+" : ""}${money(totalPL)}
                   </span>
                 </div>
               </div>

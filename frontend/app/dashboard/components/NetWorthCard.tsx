@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { money } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
@@ -79,14 +80,14 @@ export function NetWorthCard({ onReady }: { onReady?: () => void }) {
         {/* Big number */}
         <div>
           <p className={`text-3xl font-bold tracking-tight ${latest.net_worth >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-            ${latest.net_worth.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${money(latest.net_worth)}
           </p>
           {change !== null && (
             <div className={`flex items-center gap-1 mt-1 text-sm font-medium ${isPositive ? "text-emerald-600" : isNegative ? "text-red-600" : "text-muted-foreground"}`}>
               {isPositive ? <TrendingUp className="h-4 w-4" /> : isNegative ? <TrendingDown className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
               <span>
                 {isPositive ? "+" : ""}
-                ${change.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${money(change)}
               </span>
               {changePct !== null && (
                 <span className="text-muted-foreground">
@@ -103,25 +104,25 @@ export function NetWorthCard({ onReady }: { onReady?: () => void }) {
           <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2">
             <p className="text-muted-foreground text-xs">Cash</p>
             <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-              ${latest.total_cash.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              ${money(latest.total_cash)}
             </p>
           </div>
           <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 px-3 py-2">
             <p className="text-muted-foreground text-xs">Investments</p>
             <p className="font-semibold text-blue-700 dark:text-blue-400">
-              ${latest.total_investments.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              ${money(latest.total_investments)}
             </p>
           </div>
           <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2">
             <p className="text-muted-foreground text-xs">Assets</p>
             <p className="font-semibold text-amber-700 dark:text-amber-400">
-              ${latest.total_assets.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              ${money(latest.total_assets)}
             </p>
           </div>
           <div className="rounded-md bg-red-50 dark:bg-red-950/30 px-3 py-2">
             <p className="text-muted-foreground text-xs">Liabilities</p>
             <p className="font-semibold text-red-700 dark:text-red-400">
-              -${latest.total_liabilities.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              -${money(latest.total_liabilities)}
             </p>
           </div>
         </div>

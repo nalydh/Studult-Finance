@@ -7,6 +7,7 @@ from app.models.snapshot import NetWorthSnapshot
 from app.models.incomeevent import IncomeEvent
 from app.models.account import Account
 from app.models.asset import Asset
+from app.models.investmentcontribution import InvestmentContribution
 from app.auth.dependencies import get_current_user_id
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -34,7 +35,11 @@ def get_analytics_data(
                 dt = datetime.fromisoformat(dt)
             month_str = dt.strftime("%b '%y")
 
-            netWorthData.append({"month": month_str, "value": round(snap.net_worth, 2)})
+            netWorthData.append({
+                "month": month_str,
+                "value": round(snap.net_worth, 2),
+                "note": snap.note,
+            })
             assetAllocationData.append({
                 "month": month_str,
                 "cash":        round(snap.total_cash, 2),
@@ -157,6 +162,67 @@ def get_analytics_data(
             for event in sorted(incomes, key=lambda e: e.date, reverse=True)[:50]
         ]
 
+        # 3. Derived spending.
+        #
+        # StuFin deliberately records no transactions, so outflow is inferred
+        # rather than entered: income that did not end up as net worth was spent.
+        #
+        #   ΔNW = income − spending + investment_growth + asset_revaluation
+        #   =>  spending ≈ income − ΔNW + investment_growth
+        #
+        # investment_growth is known exactly (change in balances minus the
+        # contributions logged at check-in), so the only unmodelled term is
+        # asset revaluation, which moves rarely. Buying an asset correctly does
+        # not count as spending — value moved between columns, it didn't leave.
+        contribution_rows = session.exec(
+            select(InvestmentContribution)
+            .join(Account, Account.id == InvestmentContribution.account_id)
+            .where(Account.user_id == user_id)
+        ).all()
+
+        def _as_datetime(value):
+            if isinstance(value, datetime):
+                return value
+            try:
+                return datetime.fromisoformat(str(value)[:19])
+            except (TypeError, ValueError):
+                return None
+
+        spendingData = []
+        for prev_snap, curr_snap in zip(snapshots, snapshots[1:]):
+            start = _as_datetime(prev_snap.snapshot_date)
+            end = _as_datetime(curr_snap.snapshot_date)
+            if not start or not end:
+                continue
+
+            income_in_period = sum(
+                e.amount for e in incomes
+                if (dt := _as_datetime(e.date)) and start < dt <= end
+            )
+            contributed_in_period = sum(
+                c.amount for c in contribution_rows
+                if (dt := _as_datetime(c.date)) and start < dt <= end
+            )
+
+            nw_change = curr_snap.net_worth - prev_snap.net_worth
+            investment_growth = (
+                curr_snap.total_investments - prev_snap.total_investments
+            ) - contributed_in_period
+            estimated_spending = income_in_period - nw_change + investment_growth
+            kept = nw_change - investment_growth
+
+            spendingData.append({
+                "month":             end.strftime("%b '%y"),
+                "income":            round(income_in_period, 2),
+                "estimatedSpending": round(estimated_spending, 2),
+                "investmentGrowth":  round(investment_growth, 2),
+                "netWorthChange":    round(nw_change, 2),
+                "savingsRate": (
+                    round((kept / income_in_period) * 100, 1)
+                    if income_in_period > 0 else None
+                ),
+            })
+
         return {
             "netWorthData":         netWorthData[-12:],
             "splitData":            splitData,
@@ -164,6 +230,7 @@ def get_analytics_data(
             "savingsRateData":      savingsRateData,
             "allocationTrendsData": allocationTrendsData,
             "incomeLog":            incomeLog,
+            "spendingData":         spendingData[-12:],
         }
 
     except Exception as error:

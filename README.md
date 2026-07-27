@@ -37,9 +37,25 @@ npm run dev
 ### Notes
 
 - **Database**: SQLite by default — delete `backend/local.db` to reset. To use
-  Postgres instead, change `DATABASE_URL` in `backend/.env`. Tables are created
-  automatically on startup; new *columns* on existing tables are not (add those
-  via SQL in `backend/migrations/`).
+  Postgres instead, change `DATABASE_URL` in `backend/.env`.
+
+### Schema changes
+
+`SQLModel.metadata.create_all()` creates **missing tables** but never alters
+existing ones — adding a field to a model does *not* add the column to a
+database that already has that table. So whenever you add or change a column on
+a model that is already live:
+
+1. Add a `.sql` file to `backend/migrations/` (e.g. `add_snapshot_note.sql`)
+   using `IF NOT EXISTS` so it is safe to re-run.
+2. Deploy. On startup the backend runs any migration files it hasn't applied
+   yet and records them in the `schema_migrations` table
+   (see `backend/app/migrations_runner.py`).
+
+Files run in filename order, once each. A failing migration aborts startup on
+purpose, so a bad deploy fails visibly instead of serving a half-migrated
+database. Migrations are Postgres-only; local SQLite databases are normally
+created from scratch, so delete `local.db` if a local schema drifts.
 - **Emails**: without `RESEND_API_KEY`, emails are skipped and their links
   (verification, password reset) are printed to the backend console — copy the
   link into the browser to complete the flow.

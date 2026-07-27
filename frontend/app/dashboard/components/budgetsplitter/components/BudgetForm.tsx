@@ -6,6 +6,7 @@ BudgetForm Component:
 
 import React, { FormEvent, ChangeEvent, useState, useEffect } from "react";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
+import { money } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +22,22 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PiggyBankIcon, TrendingUp, Wallet, Settings2, Lock, Flame } from "lucide-react";
+import { PiggyBankIcon, TrendingUp, Wallet, Settings2, Lock, Loader2 } from "lucide-react";
 import { BreakdownSheet } from "./BreakdownSheet";
 import { BudgetSettings } from "./BudgetSettings";
+import { MilestoneModal } from "./MilestoneModal";
 import { startOfWeek, endOfWeek, format } from "date-fns";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-interface SplitData {
+Winterface SplitData {
   needs: number;
   wants: number;
   savings: number;
@@ -52,46 +63,11 @@ function frequencyLabel(frequency: BudgetItem["frequency"]) {
   return "week";
 }
 
-// ── Gamification Modal ──
-function MilestoneModal({ streak, onClose }: { streak: number, onClose: () => void }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return null;
-
-  let message = `You've reached a massive ${streak} check-in streak! Incredible dedication!`;
-  if (streak === 1) message = "Amazing work on submitting your first submission! Establishing the habit is the hardest part.";
-  else if (streak === 7) message = "You've reached a 7 check-in streak! A solid week of consistency!";
-  else if (streak === 50) message = "50 check-ins! You're almost at a full year of consistent tracking.";
-  else if (streak === 100) message = "100 check-ins! Absolute dedication to your financial future.";
-  else if (streak === 365) message = "365 check-ins! A full 'year' of streaks. Your consistency is incredibly inspiring.";
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl shadow-orange-900/20 animate-in zoom-in-95 duration-500 fade-in slide-in-from-bottom-4">
-        <div className="mx-auto w-24 h-24 bg-gradient-to-tr from-orange-600/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-6 relative">
-          <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-ping opacity-20"></div>
-          <Flame className="w-12 h-12 text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" fill="currentColor" />
-        </div>
-        <h2 className="text-3xl font-black text-white mb-3">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-yellow-500">
-            {streak} Streak!
-          </span>
-        </h2>
-        <p className="text-zinc-400 leading-relaxed mb-8">{message}</p>
-        <button 
-          onClick={onClose} 
-          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-orange-500/25 transition-all active:scale-[0.98]"
-        >
-          Keep it up!
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function BudgetForm({ onReady }: { onReady?: () => void }) {
   const authFetch = useAuthFetch();
   const [income, setIncome] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [splitData, setSplitData] = useState<SplitData>({
     needs: 0,
@@ -217,17 +193,23 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
     }
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitError(null);
 
-    // Calculate week start (Monday) in UTC
-    const now = new Date();
-    const weekStart = new Date(now);
-    const dayOfWeek = now.getDay();
-    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    weekStart.setDate(now.getDate() - daysToMonday);
-    weekStart.setHours(0, 0, 0, 0);
+    if (!income || Number(income) <= 0) {
+      setSubmitError("Please enter a valid amount.");
+      return;
+    }
+    // Submitting locks the week in — ask for confirmation first.
+    setConfirmOpen(true);
+  }
+
+  async function submitWeeklyBudget() {
+    // Re-entry guard: the button is disabled while in flight, but state
+    // updates are async — this stops a double-click firing two requests.
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
       const response = await authFetch("/budget/calculate", {
@@ -246,16 +228,20 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
         const errorData = await response.json().catch(() => null);
         const message = errorData?.detail || `Backend returned ${response.status}`;
         setSubmitError(message);
+        toast.error("Weekly budget not submitted", { description: message });
         return;
       }
 
       const data = await response.json();
-      console.log("Received split:", data);
 
       setSplitAmounts({
         needs: data.income_event.needs_allocated,
         wants: data.income_event.wants_allocated,
         savings: data.income_event.savings_allocated,
+      });
+
+      toast.success("Weekly budget submitted", {
+        description: `$${money(Number(income))} split — Needs $${money(data.income_event.needs_allocated)}, Wants $${money(data.income_event.wants_allocated)}, Savings $${money(data.income_event.savings_allocated)}`,
       });
 
       // Gamification Check
@@ -269,6 +255,10 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
     } catch (error) {
       console.error("POST ERROR:", error);
       setSubmitError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setConfirmOpen(false);
     }
   }
 
@@ -489,12 +479,17 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
               id="tour-submit-button"
               type="submit"
               className="w-full bg-primary-dark hover:bg-primary-light"
-              disabled={isLockedOut}
+              disabled={isLockedOut || isSubmitting}
             >
               {isLockedOut ? (
                 <>
                   <Lock className="w-4 h-4 mr-2" />
                   Already Submitted This Week
+                </>
+              ) : isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting…
                 </>
               ) : (
                 "Submit"
@@ -505,6 +500,45 @@ function BudgetForm({ onReady }: { onReady?: () => void }) {
         </CardContent>
       </Card>
     </form>
+
+    {/* Weekly submit confirmation */}
+    <Dialog open={confirmOpen} onOpenChange={(open) => !isSubmitting && setConfirmOpen(open)}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Submit weekly budget?</DialogTitle>
+          <DialogDescription>
+            You&apos;re about to split ${money(Number(income || 0))} for the week of{" "}
+            {format(weekStart, "d MMM")} – {format(weekEnd, "d MMM")}. You can only submit once per
+            week.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 gap-2 sm:gap-0">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSubmitting}
+            onClick={() => setConfirmOpen(false)}
+          >
+            No, go back
+          </Button>
+          <Button
+            type="button"
+            className="bg-primary-dark hover:bg-primary-light"
+            disabled={isSubmitting}
+            onClick={submitWeeklyBudget}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting…
+              </>
+            ) : (
+              "Yes, submit"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

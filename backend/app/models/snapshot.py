@@ -14,3 +14,8 @@ class NetWorthSnapshot(SQLModel, table=True):
     total_liabilities: float
     total_assets: float
     net_worth: float
+
+    # One line from the user on what happened this month. Because StuFin never
+    # records transactions, this is the only thing that can ever explain a
+    # movement in net worth after the fact.
+    note: Optional[str] = Field(default=None, max_length=280)

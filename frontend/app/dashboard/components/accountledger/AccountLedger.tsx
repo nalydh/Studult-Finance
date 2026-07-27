@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent } from "react";
+import { toast } from "sonner";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -15,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Landmark, Banknote, TrendingUp, CreditCard, PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import { API_BASE } from "@/lib/api";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 
@@ -51,7 +52,7 @@ const CATEGORY_STYLE: Record<string, { bg: string; text: string; icon: React.Rea
 };
 
 function fmt(n: number) {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2 });
+  return money(n);
 }
 
 /* ══════════════════════════════════════════════════════════════════ */
@@ -112,10 +113,12 @@ export default function AccountLedger({ onReady }: { onReady?: () => void }) {
         }),
       });
       if (!res.ok) throw new Error("Failed to create account");
+      toast.success(`Account "${newName}" created`);
       resetAddForm();
       setAddOpen(false);
       fetchAccounts();
     } catch (err) {
+      toast.error("Couldn't create the account. Please try again.");
       console.error("Error adding account:", err);
     } finally {
       setIsSubmitting(false);
@@ -147,10 +150,12 @@ export default function AccountLedger({ onReady }: { onReady?: () => void }) {
         }),
       });
       if (!res.ok) throw new Error("Failed to update account");
+      toast.success(`Account "${editName}" updated`);
       setEditOpen(false);
       setEditingAccount(null);
       fetchAccounts();
     } catch (err) {
+      toast.error("Couldn't save the account changes. Please try again.");
       console.error("Error editing account:", err);
     } finally {
       setIsSubmitting(false);
@@ -164,9 +169,11 @@ export default function AccountLedger({ onReady }: { onReady?: () => void }) {
     try {
       const res = await authFetch(`/accounts/${deleteTarget.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete account");
+      toast.success(`Account "${deleteTarget.name}" deleted`);
       setDeleteTarget(null);
       fetchAccounts();
     } catch (err) {
+      toast.error("Couldn't delete the account. Please try again.");
       console.error("Error deleting account:", err);
     } finally {
       setIsSubmitting(false);

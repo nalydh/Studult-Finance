@@ -12,7 +12,7 @@ import {
   Loader2, Banknote, TrendingUp, CreditCard, Package,
   ArrowLeft, ArrowRight, Lock, CheckCircle2, PartyPopper, Info, ChevronDown,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import { API_BASE } from "@/lib/api";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 
@@ -193,6 +193,9 @@ export default function CheckInPage() {
   const [step, setStep] = useState(1);
   const totalSteps = 4;
 
+  const NOTE_MAX = 280;
+  const [note, setNote] = useState("");
+
   const authFetch = useAuthFetch();
 
   // ─── Fetch on mount ───────────────────────────────────────────────
@@ -302,7 +305,10 @@ export default function CheckInPage() {
       });
       await Promise.all(totalContribUpdates);
 
-      const snapshotRes = await authFetch("/snapshots/", { method: "POST" });
+      const snapshotRes = await authFetch("/snapshots/", {
+        method: "POST",
+        body: JSON.stringify({ note: note.trim() || null }),
+      });
       if (!snapshotRes.ok) throw new Error("Failed to generate snapshot");
 
       setIsDone(true);
@@ -474,7 +480,7 @@ export default function CheckInPage() {
                   <div className="flex-1 min-w-0">
                     <Label className="text-sm truncate block">{asset.name}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Purchased for ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      Purchased for ${money(asset.purchase_price)}
                     </p>
                   </div>
                   <Input
@@ -504,6 +510,35 @@ export default function CheckInPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Note — the only thing that can ever explain a move in net worth ── */}
+      {step === totalSteps && (
+        <Card className="mt-4">
+          <CardContent className="pt-6 space-y-2">
+            <Label htmlFor="checkin-note" className="text-sm font-medium">
+              What happened this month?{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              One line you&apos;ll thank yourself for later — &ldquo;bought a laptop&rdquo;,
+              &ldquo;started new job&rdquo;, &ldquo;car revalued&rdquo;. It shows up on your
+              net worth chart so a dip is never a mystery.
+            </p>
+            <textarea
+              id="checkin-note"
+              rows={2}
+              maxLength={NOTE_MAX}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Bought a laptop — worth it."
+              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 transition-all resize-none"
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {note.length}/{NOTE_MAX}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Navigation ── */}
       <div className="flex items-center justify-between mt-8">

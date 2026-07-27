@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { toast } from "sonner";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -163,8 +164,10 @@ export function BudgetSettings({
 
       setOpen(false);
       setError("");
+      toast.success("Budget settings updated");
     } catch (err) {
       setError("Failed to save settings. Please try again.");
+      toast.error("Failed to save budget settings. Please try again.");
       console.error("Error updating split:", err);
     }
   }

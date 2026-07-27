@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import { type Asset } from "./types";
 
 interface SellAssetDialogProps {
@@ -68,14 +68,14 @@ export function SellAssetDialog({ open, onOpenChange, asset, onSubmit }: SellAss
             <div className="flex justify-between">
               <span className="text-muted-foreground">Purchased for</span>
               <span className="font-medium">
-                ${asset?.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {asset ? `$${money(asset.purchase_price)}` : "—"}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Current Market Value</span>
               <span className="font-medium">
                 {asset?.market_value != null
-                  ? `$${asset.market_value.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                  ? `$${money(asset.market_value)}`
                   : "—"}
               </span>
             </div>
@@ -161,7 +161,7 @@ export function SellAssetDialog({ open, onOpenChange, asset, onSubmit }: SellAss
                     "font-semibold",
                     isProfitVsPurchase ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
-                    {isProfitVsPurchase ? "+" : ""}${netVsPurchase.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {isProfitVsPurchase ? "+" : ""}${money(netVsPurchase)}
                   </span>
                 </div>
                 {hasMarket && (
@@ -177,7 +177,7 @@ export function SellAssetDialog({ open, onOpenChange, asset, onSubmit }: SellAss
                     "font-semibold",
                     isProfitVsMarket ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
-                    {isProfitVsMarket ? "+" : ""}${netVsMarket.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {isProfitVsMarket ? "+" : ""}${money(netVsMarket)}
                   </span>
                 </div>
                 )}

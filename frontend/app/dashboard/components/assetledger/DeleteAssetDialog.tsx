@@ -1,3 +1,4 @@
+import { money } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
@@ -39,7 +40,7 @@ export function DeleteAssetDialog({ open, onOpenChange, asset, onConfirm }: Dele
             <div className="flex justify-between">
               <span className="text-muted-foreground">Purchase Price</span>
               <span className="font-medium">
-                ${asset.purchase_price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                ${money(asset.purchase_price)}
               </span>
             </div>
           </div>
