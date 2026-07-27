@@ -8,6 +8,8 @@ export default async function DashboardLayout({
 }) {
   const session = await auth();
 
+  let needsOnboarding = false;
+
   if (session && session.accessToken) {
     try {
       // Use 127.0.0.1 for server-side fetches to prevent Node.js IPv6 resolution issues
@@ -21,14 +23,16 @@ export default async function DashboardLayout({
 
       if (res.ok) {
         const data = await res.json();
-        if (data.error === "No preferences found") {
-          redirect("/welcome");
-        }
+        needsOnboarding = data.error === "No preferences found";
       }
     } catch (error) {
       console.error("Failed to fetch preferences during SSR:", error);
     }
   }
+
+  // redirect() throws internally, so it must live OUTSIDE the try/catch —
+  // inside, the catch swallows it and the redirect silently never happens.
+  if (needsOnboarding) redirect("/welcome");
 
   return <>{children}</>;
 }

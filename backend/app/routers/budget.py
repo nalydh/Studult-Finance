@@ -45,6 +45,23 @@ def insert_preference(
         raise HTTPException(status_code=400, detail="The total split must equal 100%")
 
     try:
+        # Upsert: re-running onboarding overwrites the setup fields but
+        # preserves streak/reminder state accumulated on the existing row.
+        existing = session.exec(
+            select(Preference).where(Preference.user_id == user_id).limit(1)
+        ).first()
+        if existing:
+            for field in (
+                "strategy_name", "needs_pct", "wants_pct", "savings_pct",
+                "week_starts_on", "income_type", "salary_amount",
+                "salary_frequency", "tutorial_completed",
+            ):
+                setattr(existing, field, getattr(data, field))
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            return existing
+
         data.user_id = user_id
         session.add(data)
         session.commit()

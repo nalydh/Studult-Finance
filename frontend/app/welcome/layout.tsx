@@ -8,6 +8,8 @@ export default async function WelcomeLayout({
 }) {
   const session = await auth();
 
+  let hasPreferences = false;
+
   if (session && session.accessToken) {
     try {
       // Use 127.0.0.1 for server-side fetches to prevent Node.js IPv6 resolution issues
@@ -21,15 +23,17 @@ export default async function WelcomeLayout({
 
       if (res.ok) {
         const data = await res.json();
-        // If they already have preferences, they shouldn't be on the welcome page!
-        if (data.error !== "No preferences found") {
-          redirect("/dashboard");
-        }
+        hasPreferences = data.error !== "No preferences found";
       }
     } catch (error) {
       console.error("Failed to fetch preferences during SSR:", error);
     }
   }
+
+  // Users who already completed onboarding shouldn't see the welcome page.
+  // redirect() throws internally, so it must live OUTSIDE the try/catch —
+  // inside, the catch swallows it and the redirect silently never happens.
+  if (hasPreferences) redirect("/dashboard");
 
   return <>{children}</>;
 }
