@@ -110,7 +110,16 @@ def verify_google_id_token(id_token: str) -> dict:
     if not any(k.get("kid") == header.get("kid") for k in keys.get("keys", [])):
         keys = _google_jwks(force_refresh=True)
 
-    claims = jwt.decode(id_token, keys, algorithms=["RS256"], audience=GOOGLE_CLIENT_ID)
+    claims = jwt.decode(
+        id_token,
+        keys,
+        algorithms=["RS256"],
+        audience=GOOGLE_CLIENT_ID,
+        # Google ID tokens carry an at_hash claim binding them to an OAuth
+        # access token we never receive or use; without this option jose
+        # rejects every real Google token ("No access_token provided").
+        options={"verify_at_hash": False},
+    )
     if claims.get("iss") not in _GOOGLE_ISSUERS:
         raise JWTError("Invalid token issuer")
     return claims

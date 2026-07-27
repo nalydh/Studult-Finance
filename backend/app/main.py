@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # ── CORS origins ──────────────────────────────────────────────────────────────
-# Set APP_URLS in Railway as a comma-separated list, e.g.:
+# Set APP_URLS in the DigitalOcean App Platform env as a comma-separated list:
 #   https://stufin.starkandco.site,https://preview.stufin.starkandco.site
 # Also supports the legacy single-value APP_URL variable.
 _allowed_origins = ["http://localhost:3000", "http://localhost:3001", "https://stufin.starkandco.site"]
@@ -52,8 +52,8 @@ for _url in os.getenv("APP_URLS", os.getenv("APP_URL", "")).split(","):
     if _url and _url not in _allowed_origins:
         _allowed_origins.append(_url)
 
-# This prints to Railway logs — confirms exactly what origins the running
-# instance sees. Check Deployments → Logs after your next deploy.
+# This prints to the DigitalOcean runtime logs — confirms exactly what origins
+# the running instance sees. Check the app's Runtime Logs after your next deploy.
 print(f"[CORS] Allowed origins: {_allowed_origins}")
 
 app.add_middleware(
