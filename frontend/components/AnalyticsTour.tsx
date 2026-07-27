@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Joyride, STATUS } from "react-joyride";
+import { Joyride, EVENTS, STATUS } from "react-joyride";
 
 function CustomTooltip({ index, step, skipProps, primaryProps, tooltipProps, backProps, isLastStep }: any) {
   return (
@@ -62,75 +62,60 @@ export default function AnalyticsTour({ run, onFinish }: AnalyticsTourProps) {
       placement: "center",
       title: "Analytics Overview",
       content:
-        "This page gives you a bird's-eye view of your financial health over time. Every chart here is driven by the data you log during your weekly check-ins.",
-      disableBeacon: true,
-    },
+        "This page gives you a bird's-eye view of your financial health over time. Every chart here is driven by the data you log during your weekly check-ins.",    },
     {
       target: "#tour-net-worth-chart",
       title: "Net Worth Over Time",
       content:
         "A monthly snapshot of your total assets minus liabilities. Track your wealth trajectory over different time periods.",
-      placement: "bottom",
-      disableBeacon: true,
-    },
+      placement: "bottom",    },
     {
       target: "#tour-breakdown-chart",
       title: "Net Worth Breakdown",
       content:
         "See exactly where your wealth lives — split across Cash Accounts, Investment Accounts, and Physical Assets.",
-      placement: "bottom",
-      disableBeacon: true,
-    },
+      placement: "bottom",    },
     {
       target: "#tour-weekly-allocation-chart",
       title: "Weekly Allocation Trends",
       content:
         "Each line tracks how much of your weekly check-in income went to Needs, Wants, and Savings. Spot patterns and see if your spending habits are trending in the right direction.",
-      placement: "bottom",
-      disableBeacon: true,
-    },
+      placement: "bottom",    },
     {
       target: "#tour-income-log",
       title: "Income Log",
       content:
         "Every check-in you submit is recorded here with a full breakdown of how that income was allocated across Needs, Wants, and Savings. When you sell an asset, that event will also be recorded here.",
-      placement: "top",
-      disableBeacon: true,
-    },
+      placement: "top",    },
     {
       target: "#tour-portfolio-panel",
       title: "Portfolio & Assets",
       content:
         "Your account and asset ledger entries are summarised here, giving you a snapshot of your current financial positions across all tracked categories.",
-      placement: "top",
-      disableBeacon: true,
-    },
+      placement: "top",    },
   ]);
 
-  const handleJoyrideCallback = (data: any) => {
-    const { status } = data;
-    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
-    if (finishedStatuses.includes(status)) {
-      onFinish();
-    }
+  // v3 renamed the `callback` prop to `onEvent`; the old prop is silently ignored.
+  const handleEvent = (data: any) => {
+    if (data.type !== EVENTS.TOUR_END) return;
+    if (data.status !== STATUS.FINISHED && data.status !== STATUS.SKIPPED) return;
+    onFinish();
   };
 
   if (!mounted) return null;
 
-  const JoyrideComponent = Joyride as any;
-
   return (
-    <JoyrideComponent
-      callback={handleJoyrideCallback}
+    <Joyride
+      onEvent={handleEvent}
       continuous
-      hideCloseButton
       run={run}
-      showProgress
-      showSkipButton
       steps={steps}
       tooltipComponent={CustomTooltip}
       scrollToFirstStep
-      floaterProps={{ disableAnimation: false }}
+      options={{
+        skipBeacon: true,
+        buttons: ["back", "primary", "skip"],
+      }}
     />
   );
 }

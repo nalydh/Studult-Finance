@@ -3,6 +3,7 @@ Email sending via Resend (https://resend.com).
 Set RESEND_API_KEY and APP_URL in backend/.env
 """
 import os
+import re
 import resend
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
@@ -17,6 +18,10 @@ def _send(to: str, subject: str, html: str) -> None:
     if not RESEND_API_KEY or RESEND_API_KEY.startswith("re_YOUR"):
         print(f"[email_service] RESEND_API_KEY not set — skipping email to {to}")
         print(f"[email_service] Subject: {subject}")
+        # Local dev: surface any links so flows like email verification and
+        # password reset can be exercised without a mail provider.
+        for link in re.findall(r'href="([^"]+)"', html):
+            print(f"[email_service] Link: {link}")
         return
     try:
         resend.api_key = RESEND_API_KEY

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Star } from "lucide-react";
-import { Joyride, STATUS } from "react-joyride";
+import { Joyride, EVENTS, STATUS } from "react-joyride";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 
 // Custom modern tooltip component for the tour
@@ -66,7 +66,6 @@ export default function DashboardTour({ run, onFinish }: DashboardTourProps) {
       title: <span className="flex items-center gap-2">Welcome to Studult Finance! <Star className="w-5 h-5 text-emerald-500 fill-emerald-500" /></span>,
       content:
         "Consistent tracking is the key to financial success. Ideally every payday (or whenever you decide to process your finances), you'll start here by entering your net income.",
-      disableBeacon: true,
     },
     {
       target: "#tour-budget-splitter",
@@ -113,40 +112,42 @@ export default function DashboardTour({ run, onFinish }: DashboardTourProps) {
   ]);
 
   const authFetch = useAuthFetch();
+  const completedRef = useRef(false);
 
-  const handleJoyrideCallback = async (data: any) => {
-    const { status } = data;
-    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+  // v3 renamed the `callback` prop to `onEvent`; the old prop is silently
+  // ignored, which left tutorial_completed forever false in the DB.
+  const handleEvent = async (data: any) => {
+    if (data.type !== EVENTS.TOUR_END || completedRef.current) return;
+    if (data.status !== STATUS.FINISHED && data.status !== STATUS.SKIPPED) return;
+    completedRef.current = true;
 
-    if (finishedStatuses.includes(status)) {
-      try {
-        await authFetch("/budget/preferences", {
-          method: "PUT",
-          body: JSON.stringify({ tutorial_completed: true }),
-        });
-      } catch (e) {
-        console.error("Failed to update tutorial completion status:", e);
+    try {
+      const res = await authFetch("/budget/preferences", {
+        method: "PUT",
+        body: JSON.stringify({ tutorial_completed: true }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        console.error("Failed to persist tutorial completion:", res.status, detail);
       }
-      onFinish();
+    } catch (e) {
+      console.error("Failed to update tutorial completion status:", e);
     }
+    onFinish();
   };
 
   if (!mounted) return null;
 
-  const JoyrideComponent = Joyride as any;
-
   return (
-    <JoyrideComponent
-      callback={handleJoyrideCallback}
+    <Joyride
+      onEvent={handleEvent}
       continuous
-      hideCloseButton
       run={run}
-      showProgress
-      showSkipButton
       steps={steps}
       tooltipComponent={CustomTooltip}
-      floaterProps={{
-        disableAnimation: false,
+      options={{
+        skipBeacon: true,
+        buttons: ["back", "primary", "skip"],
       }}
     />
   );
