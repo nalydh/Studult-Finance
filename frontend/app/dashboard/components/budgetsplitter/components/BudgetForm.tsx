@@ -37,7 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-Winterface SplitData {
+interface SplitData {
   needs: number;
   wants: number;
   savings: number;
